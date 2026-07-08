@@ -2,295 +2,257 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>RadPrompt</title>
 <meta name="description" content="RadPrompt – Prompt-Board für radiologische KI-Workflows">
+<meta name="theme-color" content="#0b0d10">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230d0f12'/><circle cx='50' cy='50' r='26' fill='none' stroke='%236fd3e7' stroke-width='7'/><circle cx='50' cy='50' r='7' fill='%236fd3e7'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0b0d10; --bg2:#101318; --panel:rgba(255,255,255,.045);
-  --panel-strong:rgba(255,255,255,.07); --stroke:rgba(255,255,255,.09);
+  --bg:#0b0d10; --panel:rgba(255,255,255,.045);
+  --panel-strong:rgba(255,255,255,.075); --stroke:rgba(255,255,255,.09);
   --stroke-hi:rgba(255,255,255,.18);
   --txt:#e8ecef; --txt-dim:#9aa4ad; --txt-faint:#5f6a73;
   --accent:#6fd3e7; --accent-soft:rgba(111,211,231,.14);
   --gold:#e7b36f; --gold-soft:rgba(231,179,111,.15);
   --danger:#e77b6f;
-  --r-lg:20px; --r-md:14px; --r-sm:10px;
-  --glass-blur:22px;
+  --r-lg:18px; --r-md:13px; --r-sm:9px;
+  --glass:22px;
   --shadow:0 10px 40px rgba(0,0,0,.45);
-  --font-d:"Space Grotesk",sans-serif; --font-b:"Inter",sans-serif; --font-m:"JetBrains Mono",monospace;
+  --fd:"Space Grotesk",sans-serif; --fb:"Inter",sans-serif; --fm:"JetBrains Mono",monospace;
+  --card-min:150px; --card-h:88px; --gap:11px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
-  background:var(--bg); color:var(--txt); font-family:var(--font-b);
-  font-size:14px; line-height:1.5; overflow-x:hidden;
-  -webkit-font-smoothing:antialiased;
+  background:var(--bg); color:var(--txt); font-family:var(--fb); font-size:14px;
+  line-height:1.5; overflow-x:hidden; -webkit-font-smoothing:antialiased; overscroll-behavior-y:none;
 }
-/* ambient background */
+body.compact{ --card-h:64px; --gap:8px; font-size:13px; }
+
 .orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;background:
-  radial-gradient(1200px 800px at 85% -10%, #14202a 0%, transparent 60%),
-  radial-gradient(900px 700px at -10% 110%, #171a22 0%, transparent 55%), var(--bg);}
+  radial-gradient(1200px 800px at 85% -10%,#14202a 0%,transparent 60%),
+  radial-gradient(900px 700px at -10% 110%,#171a22 0%,transparent 55%),var(--bg);}
 .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;will-change:transform;}
-.orb.a{width:420px;height:420px;background:radial-gradient(circle,#1b4a58,transparent 70%);top:-120px;right:-80px;animation:drift1 26s ease-in-out infinite alternate;}
-.orb.b{width:380px;height:380px;background:radial-gradient(circle,#3a2e1c,transparent 70%);bottom:-140px;left:-100px;animation:drift2 32s ease-in-out infinite alternate;}
-.orb.c{width:260px;height:260px;background:radial-gradient(circle,#1f2733,transparent 70%);top:40%;left:55%;animation:drift1 40s ease-in-out infinite alternate-reverse;}
-@keyframes drift1{to{transform:translate(-60px,50px) scale(1.15)}}
-@keyframes drift2{to{transform:translate(70px,-40px) scale(1.1)}}
-.scanline{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;
-  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.35) 3px 4px);}
+.orb.a{width:420px;height:420px;background:radial-gradient(circle,#1b4a58,transparent 70%);top:-120px;right:-80px;animation:d1 26s ease-in-out infinite alternate;}
+.orb.b{width:380px;height:380px;background:radial-gradient(circle,#3a2e1c,transparent 70%);bottom:-140px;left:-100px;animation:d2 32s ease-in-out infinite alternate;}
+.orb.c{width:260px;height:260px;background:radial-gradient(circle,#1f2733,transparent 70%);top:42%;left:55%;animation:d1 40s ease-in-out infinite alternate-reverse;}
+@keyframes d1{to{transform:translate(-60px,50px) scale(1.15)}}
+@keyframes d2{to{transform:translate(70px,-40px) scale(1.1)}}
+.scan{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.35) 3px 4px);}
 
-.app{max-width:960px;margin:0 auto;padding:18px 18px 60px;}
-
-/* header */
-header{display:flex;align-items:center;gap:14px;padding:6px 4px 16px;animation:fadeDown .5s ease both;}
-.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#12161b,#0a0c0f);
-  border:1px solid var(--stroke-hi);display:grid;place-items:center;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);}
-.logo svg{width:20px;height:20px}
-h1{font-family:var(--font-d);font-size:20px;font-weight:600;letter-spacing:.4px;}
-h1 span{color:var(--accent)}
-.sub{font-family:var(--font-m);font-size:10.5px;color:var(--txt-faint);letter-spacing:1.2px;text-transform:uppercase;}
-.head-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
-.sync{font-family:var(--font-m);font-size:10px;color:var(--txt-faint);display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--stroke);border-radius:999px;background:var(--panel);}
+.shell{max-width:1080px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:0 12px;}
+.topbar{position:sticky;top:0;z-index:20;padding:10px 0 8px;background:linear-gradient(180deg,rgba(11,13,16,.92) 60%,rgba(11,13,16,0));backdrop-filter:blur(10px);}
+.trow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--stroke);backdrop-filter:blur(var(--glass)) saturate(1.3);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.06);}
+.logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(145deg,#12161b,#0a0c0f);border:1px solid var(--stroke-hi);display:grid;place-items:center;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+.logo svg{width:17px;height:17px}
+.brand{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+.brand h1{font-family:var(--fd);font-size:16px;font-weight:600;letter-spacing:.3px;white-space:nowrap}
+.brand h1 span{color:var(--accent)}
+.brand .sub{font-family:var(--fm);font-size:8.5px;color:var(--txt-faint);letter-spacing:1.4px;text-transform:uppercase}
+.search{flex:1;min-width:80px;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid var(--stroke);transition:.2s;}
+.search:focus-within{border-color:rgba(111,211,231,.45);box-shadow:0 0 0 3px rgba(111,211,231,.1)}
+.search svg{color:var(--txt-faint);flex:none}
+.search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--txt);font-size:13px;font-family:var(--fb)}
+.search kbd{font-family:var(--fm);font-size:9px;color:var(--txt-faint);border:1px solid var(--stroke);border-radius:5px;padding:2px 5px;flex:none}
+.tools{display:flex;gap:4px;align-items:center;flex:none}
+.icon-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;border:1px solid transparent;color:var(--txt-dim);transition:.16s;background:none;cursor:pointer}
+.icon-btn:hover{background:var(--panel-strong);border-color:var(--stroke);color:var(--txt)}
+.icon-btn.on{color:var(--accent);border-color:rgba(111,211,231,.35);background:var(--accent-soft)}
+.sync{font-family:var(--fm);font-size:9px;color:var(--txt-faint);display:flex;align-items:center;gap:5px;padding:0 4px}
 .sync .dot{width:7px;height:7px;border-radius:50%;background:var(--txt-faint);transition:.3s}
 .sync.ok .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
 .sync.local .dot{background:var(--gold)}
 .sync.err .dot{background:var(--danger)}
+.sync .lbl{display:inline}
 
-/* glass primitives */
-.glass{background:var(--panel);backdrop-filter:blur(var(--glass-blur)) saturate(1.3);
-  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.3);
-  border:1px solid var(--stroke);border-radius:var(--r-lg);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.06);}
+.row2{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.pills{display:flex;gap:6px;overflow-x:auto;flex:1;padding-bottom:2px;scrollbar-width:none;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.pills::-webkit-scrollbar{display:none}
+.pill{scroll-snap-align:start;white-space:nowrap;padding:7px 14px;border-radius:999px;border:1px solid var(--stroke);background:var(--panel);font-size:12.5px;font-weight:500;color:var(--txt-dim);transition:.18s;display:inline-flex;align-items:center;gap:7px;flex:none;cursor:pointer;backdrop-filter:blur(8px)}
+.pill:hover{color:var(--txt);border-color:var(--stroke-hi)}
+.pill.active{color:var(--accent);border-color:rgba(111,211,231,.4);background:var(--accent-soft);box-shadow:0 0 16px rgba(111,211,231,.12)}
+.pill.fav{color:var(--gold)}
+.pill.fav.active{border-color:rgba(231,179,111,.45);background:var(--gold-soft);box-shadow:0 0 16px rgba(231,179,111,.12)}
+.pill .count{font-family:var(--fm);font-size:9.5px;opacity:.6}
+.pill.dragover{border-style:dashed;border-color:var(--accent)}
+.pill.addf{color:var(--txt-faint);border-style:dashed;padding:7px 11px}
+.pill.addf:hover{color:var(--accent);border-color:rgba(111,211,231,.4)}
 
-button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:var(--r-sm);
-  background:var(--panel-strong);border:1px solid var(--stroke);font-size:12.5px;font-weight:500;
-  transition:all .18s ease;backdrop-filter:blur(8px);}
-.btn:hover{border-color:var(--stroke-hi);background:rgba(255,255,255,.1);transform:translateY(-1px);}
-.btn:active{transform:translateY(0) scale(.98)}
-.btn.primary{background:var(--accent-soft);border-color:rgba(111,211,231,.35);color:var(--accent);}
-.btn.primary:hover{background:rgba(111,211,231,.22)}
-.btn.ghost{background:transparent}
-.btn.sm{padding:5px 10px;font-size:11.5px;border-radius:8px}
-.icon-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;border:1px solid transparent;color:var(--txt-dim);transition:.18s;}
-.icon-btn:hover{background:var(--panel-strong);border-color:var(--stroke);color:var(--txt);}
-svg{display:block}
+.board{flex:1;padding:12px 2px 40px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr));gap:var(--gap);}
 
-/* favorites bar */
-.favbar{margin-bottom:14px;padding:12px 14px;animation:fadeDown .5s .06s ease both;}
-.favbar .bar-label{display:flex;align-items:center;gap:8px;font-family:var(--font-m);font-size:10px;
-  letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
-.favbar .chips{display:flex;flex-wrap:wrap;gap:8px;}
-.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;
-  background:linear-gradient(160deg,rgba(231,179,111,.13),rgba(231,179,111,.05));
-  border:1px solid rgba(231,179,111,.3);font-size:12.5px;font-weight:500;transition:.18s;position:relative;overflow:hidden;}
-.chip:hover{border-color:rgba(231,179,111,.6);transform:translateY(-1px);box-shadow:0 4px 16px rgba(231,179,111,.15);}
-.chip .cdot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
-.fav-empty{font-size:12px;color:var(--txt-faint);font-style:italic;}
-
-/* folder tabs */
-.tabs-wrap{display:flex;align-items:center;gap:8px;margin-bottom:14px;animation:fadeDown .5s .12s ease both;}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
-.tab{padding:8px 16px;border-radius:999px;border:1px solid var(--stroke);background:var(--panel);
-  font-size:12.5px;font-weight:500;color:var(--txt-dim);transition:.2s;backdrop-filter:blur(10px);
-  display:inline-flex;align-items:center;gap:8px;}
-.tab:hover{color:var(--txt);border-color:var(--stroke-hi)}
-.tab.active{color:var(--accent);border-color:rgba(111,211,231,.4);background:var(--accent-soft);
-  box-shadow:0 0 18px rgba(111,211,231,.12);}
-.tab .count{font-family:var(--font-m);font-size:10px;opacity:.6}
-.tab.dragover{border-style:dashed;border-color:var(--accent);}
-
-/* prompt grid */
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;animation:fadeUp .5s .18s ease both;}
-@media(max-width:820px){.grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:620px){.grid{grid-template-columns:repeat(2,1fr)}}
-.card{position:relative;display:flex;flex-direction:column;min-height:96px;padding:12px 12px 10px;
-  border-radius:var(--r-md);background:linear-gradient(165deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
-  border:1px solid var(--stroke);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  transition:transform .2s ease,border-color .2s,box-shadow .25s;cursor:pointer;overflow:hidden;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 4px 18px rgba(0,0,0,.3);}
-.card::before{content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;transition:.3s;
-  background:radial-gradient(300px 140px at var(--mx,50%) var(--my,0%),rgba(111,211,231,.14),transparent 65%);pointer-events:none;}
-.card:hover{transform:translateY(-3px);border-color:var(--stroke-hi);box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.1);}
+.card{position:relative;display:flex;flex-direction:column;min-height:var(--card-h);padding:11px 11px 9px;border-radius:var(--r-md);background:linear-gradient(165deg,rgba(255,255,255,.07),rgba(255,255,255,.025));border:1px solid var(--stroke);backdrop-filter:blur(14px);transition:transform .2s,border-color .2s,box-shadow .25s;cursor:pointer;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 4px 18px rgba(0,0,0,.3);animation:fadeUp .38s ease both;animation-delay:calc(var(--i,0)*.025s)}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;transition:.3s;background:radial-gradient(280px 130px at var(--mx,50%) var(--my,0),rgba(111,211,231,.14),transparent 65%);pointer-events:none}
+.card:hover{transform:translateY(-3px);border-color:var(--stroke-hi);box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.1)}
 .card:hover::before{opacity:1}
 .card:active{transform:translateY(-1px) scale(.985)}
 .card.dragging{opacity:.35;transform:scale(.96)}
 .card.dropside-l{box-shadow:-3px 0 0 var(--accent),0 4px 18px rgba(0,0,0,.3)}
 .card.dropside-r{box-shadow:3px 0 0 var(--accent),0 4px 18px rgba(0,0,0,.3)}
-.card .name{font-family:var(--font-d);font-size:13px;font-weight:600;line-height:1.3;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;padding-right:18px;}
-.card .meta{margin-top:auto;padding-top:8px;display:flex;align-items:center;gap:6px;font-family:var(--font-m);font-size:9.5px;color:var(--txt-faint);letter-spacing:.5px;}
-.card .badge{padding:2px 7px;border-radius:6px;border:1px solid var(--stroke);background:rgba(255,255,255,.04);}
-.card .badge.docs{color:var(--accent);border-color:rgba(111,211,231,.3)}
-.card .fav-ind{position:absolute;top:9px;right:32px;color:var(--gold);opacity:.9}
-.card .expand{position:absolute;top:6px;right:6px;opacity:0;transition:.18s;}
-.card:hover .expand{opacity:1}
-.card .ph-fields{display:flex;flex-direction:column;gap:6px;margin:9px 0 2px;}
-.ph-fields input,.ph-fields select{width:100%;padding:6px 9px;border-radius:8px;font-size:11.5px;
-  background:rgba(0,0,0,.35);border:1px solid var(--stroke);color:var(--txt);font-family:var(--font-b);
-  transition:.15s;outline:none;}
+.card .name{font-family:var(--fd);font-size:12.5px;font-weight:600;line-height:1.28;padding-right:20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+body.compact .card .name{-webkit-line-clamp:2;font-size:12px}
+.card .meta{margin-top:auto;padding-top:7px;display:flex;align-items:center;gap:5px;font-family:var(--fm);font-size:9px;color:var(--txt-faint);letter-spacing:.4px;flex-wrap:wrap}
+body.compact .card .meta{display:none}
+.badge{padding:2px 6px;border-radius:5px;border:1px solid var(--stroke);background:rgba(255,255,255,.04)}
+.badge.docs{color:var(--accent);border-color:rgba(111,211,231,.3)}
+.badge.ph{color:var(--gold);border-color:rgba(231,179,111,.3)}
+.fav-ind{position:absolute;top:8px;right:30px;color:var(--gold);opacity:.9}
+.expand{position:absolute;top:5px;right:5px;width:24px;height:24px;display:grid;place-items:center;border-radius:7px;color:var(--txt-dim);opacity:0;transition:.16s;background:none;border:none;cursor:pointer}
+.card:hover .expand,.card:focus-within .expand{opacity:1}
+.expand:hover{background:var(--panel-strong);color:var(--txt)}
+.ph-fields{display:flex;flex-direction:column;gap:5px;margin:8px 0 2px}
+.ph-fields input,.ph-fields select{width:100%;padding:6px 9px;border-radius:8px;font-size:11.5px;background:rgba(0,0,0,.35);border:1px solid var(--stroke);color:var(--txt);font-family:var(--fb);outline:none;transition:.15s}
 .ph-fields input::placeholder{color:var(--txt-faint)}
-.ph-fields input:focus,.ph-fields select:focus{border-color:rgba(111,211,231,.5);box-shadow:0 0 0 3px rgba(111,211,231,.1);}
-.ph-fields select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4ad' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;}
+.ph-fields input:focus,.ph-fields select:focus{border-color:rgba(111,211,231,.5);box-shadow:0 0 0 3px rgba(111,211,231,.1)}
+.ph-fields select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4ad' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
 .card.has-ph{cursor:default}
-.card.has-ph .copy-cta{align-self:stretch;justify-content:center;margin-top:4px;}
-.copy-cta{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;
-  background:var(--accent-soft);border:1px solid rgba(111,211,231,.3);color:var(--accent);
-  font-size:11.5px;font-weight:600;transition:.18s;}
+.copy-cta{display:inline-flex;align-items:center;justify-content:center;gap:6px;align-self:stretch;margin-top:4px;padding:6px 10px;border-radius:8px;background:var(--accent-soft);border:1px solid rgba(111,211,231,.3);color:var(--accent);font-size:11.5px;font-weight:600;transition:.18s;cursor:pointer}
 .copy-cta:hover{background:rgba(111,211,231,.24)}
+body.compact .ph-fields,body.compact .copy-cta{margin-top:6px}
 
-/* add tile */
-.card.add{align-items:center;justify-content:center;border-style:dashed;background:transparent;color:var(--txt-faint);gap:6px;}
+.card.add{align-items:center;justify-content:center;border-style:dashed;background:transparent;color:var(--txt-faint);gap:5px}
 .card.add:hover{color:var(--accent);border-color:rgba(111,211,231,.4)}
-.card.add .plus{font-size:22px;font-weight:300;line-height:1}
-.card.add span{font-size:11px}
+.card.add .plus{font-size:20px;font-weight:300;line-height:1}
+.card.add span{font-size:10.5px}
 
-/* copy flash */
 @keyframes ripple{from{transform:scale(0);opacity:.5}to{transform:scale(3.2);opacity:0}}
-.ripple{position:absolute;border-radius:50%;background:var(--accent);width:60px;height:60px;pointer-events:none;animation:ripple .6s ease-out forwards;}
-.card.copied{border-color:rgba(111,211,231,.6);box-shadow:0 0 0 1px rgba(111,211,231,.4),0 0 26px rgba(111,211,231,.2);}
+.ripple{position:absolute;border-radius:50%;background:var(--accent);width:60px;height:60px;pointer-events:none;animation:ripple .6s ease-out forwards}
+.card.copied{border-color:rgba(111,211,231,.6);box-shadow:0 0 0 1px rgba(111,211,231,.4),0 0 26px rgba(111,211,231,.2)}
 
-/* modal */
-.overlay{position:fixed;inset:0;background:rgba(5,7,9,.6);backdrop-filter:blur(6px);z-index:50;
-  display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s;}
+.empty{grid-column:1/-1;text-align:center;padding:40px 12px;color:var(--txt-faint);font-size:13px}
+.no-hits{grid-column:1/-1;text-align:center;padding:34px 12px;color:var(--txt-faint);font-size:13px}
+
+.cmdk{position:fixed;inset:0;z-index:70;display:grid;place-items:start center;padding:14vh 16px 16px;background:rgba(5,7,9,.55);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s}
+.cmdk.open{opacity:1;pointer-events:auto}
+.cmdk-box{width:min(560px,100%);background:linear-gradient(170deg,rgba(28,32,38,.95),rgba(16,19,23,.96));border:1px solid var(--stroke-hi);border-radius:var(--r-lg);box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;transform:translateY(-12px) scale(.98);transition:transform .25s cubic-bezier(.2,.9,.3,1.2)}
+.cmdk.open .cmdk-box{transform:none}
+.cmdk-in{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--stroke)}
+.cmdk-in svg{color:var(--accent)}
+.cmdk-in input{flex:1;background:none;border:none;outline:none;color:var(--txt);font-size:15px;font-family:var(--fb)}
+.cmdk-list{max-height:52vh;overflow:auto;padding:6px}
+.cmdk-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:.1s}
+.cmdk-item .ci-name{font-size:13.5px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmdk-item .ci-folder{font-family:var(--fm);font-size:9.5px;color:var(--txt-faint);padding:2px 7px;border:1px solid var(--stroke);border-radius:5px;flex:none}
+.cmdk-item.sel{background:var(--accent-soft)}
+.cmdk-item .cistar{color:var(--gold);opacity:.85;flex:none}
+.cmdk-foot{padding:8px 14px;border-top:1px solid var(--stroke);font-family:var(--fm);font-size:9.5px;color:var(--txt-faint);display:flex;gap:14px;flex-wrap:wrap}
+
+.overlay{position:fixed;inset:0;background:rgba(5,7,9,.6);backdrop-filter:blur(6px);z-index:60;display:grid;place-items:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.open{opacity:1;pointer-events:auto}
-.modal{width:min(720px,100%);max-height:88vh;display:flex;flex-direction:column;
-  background:linear-gradient(170deg,rgba(28,32,38,.92),rgba(16,19,23,.94));
-  backdrop-filter:blur(30px) saturate(1.4);border:1px solid var(--stroke-hi);border-radius:var(--r-lg);
-  box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);
-  transform:translateY(16px) scale(.97);transition:transform .3s cubic-bezier(.2,.9,.3,1.2);}
+.modal{width:min(720px,100%);max-height:90dvh;display:flex;flex-direction:column;background:linear-gradient(170deg,rgba(28,32,38,.92),rgba(16,19,23,.94));backdrop-filter:blur(30px) saturate(1.4);border:1px solid var(--stroke-hi);border-radius:var(--r-lg);box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);transform:translateY(16px) scale(.97);transition:transform .3s cubic-bezier(.2,.9,.3,1.2)}
 .overlay.open .modal{transform:none}
-.modal-h{display:flex;align-items:center;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--stroke);}
-.modal-h input.title{flex:1;font-family:var(--font-d);font-size:16px;font-weight:600;background:transparent;
-  border:none;outline:none;color:var(--txt);border-bottom:1px dashed transparent;padding:2px 0;transition:.2s;}
+.modal-h{display:flex;align-items:center;gap:8px;padding:14px 16px 11px;border-bottom:1px solid var(--stroke)}
+.modal-h input.title{flex:1;min-width:0;font-family:var(--fd);font-size:16px;font-weight:600;background:transparent;border:none;outline:none;color:var(--txt);border-bottom:1px dashed transparent;padding:2px 0;transition:.2s}
 .modal-h input.title:focus{border-bottom-color:rgba(111,211,231,.4)}
-.modal-b{padding:14px 18px;overflow:auto;display:flex;flex-direction:column;gap:12px;}
-.modal-b textarea{width:100%;min-height:300px;resize:vertical;padding:12px;border-radius:var(--r-sm);
-  background:rgba(0,0,0,.35);border:1px solid var(--stroke);color:var(--txt);
-  font-family:var(--font-m);font-size:12px;line-height:1.6;outline:none;transition:.15s;}
-.modal-b textarea:focus{border-color:rgba(111,211,231,.45);box-shadow:0 0 0 3px rgba(111,211,231,.08);}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.field{display:flex;flex-direction:column;gap:5px;}
-.field label{font-family:var(--font-m);font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt-faint);}
-.field select{padding:8px 30px 8px 11px;border-radius:var(--r-sm);background:rgba(0,0,0,.35);
-  border:1px solid var(--stroke);color:var(--txt);font-size:12.5px;outline:none;appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4ad' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
-.toggle{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--txt-dim);}
-.toggle .tk{width:36px;height:20px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid var(--stroke);position:relative;transition:.2s;}
-.toggle .tk::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--txt-dim);transition:.2s;}
+.modal-b{padding:13px 16px;overflow:auto;display:flex;flex-direction:column;gap:11px}
+.modal-b textarea{width:100%;min-height:280px;resize:vertical;padding:12px;border-radius:var(--r-sm);background:rgba(0,0,0,.35);border:1px solid var(--stroke);color:var(--txt);font-family:var(--fm);font-size:12px;line-height:1.6;outline:none;transition:.15s}
+.modal-b textarea:focus{border-color:rgba(111,211,231,.45);box-shadow:0 0 0 3px rgba(111,211,231,.08)}
+.frow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-family:var(--fm);font-size:9px;letter-spacing:1.1px;text-transform:uppercase;color:var(--txt-faint)}
+.field select{padding:8px 30px 8px 11px;border-radius:var(--r-sm);background:rgba(0,0,0,.35);border:1px solid var(--stroke);color:var(--txt);font-size:12.5px;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4ad' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.toggle{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--txt-dim)}
+.toggle .tk{width:36px;height:20px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid var(--stroke);position:relative;transition:.2s;flex:none}
+.toggle .tk::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--txt-dim);transition:.2s}
 .toggle input{display:none}
 .toggle input:checked+.tk{background:var(--accent-soft);border-color:rgba(111,211,231,.5)}
 .toggle input:checked+.tk::after{left:18px;background:var(--accent)}
-.ph-preview{font-family:var(--font-m);font-size:10.5px;color:var(--txt-faint);}
+.ph-preview{font-family:var(--fm);font-size:10.5px;color:var(--txt-faint);line-height:1.7}
 .ph-preview b{color:var(--accent);font-weight:500}
-.modal-f{display:flex;gap:8px;padding:13px 18px;border-top:1px solid var(--stroke);align-items:center;}
+.modal-f{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--stroke);align-items:center}
 .modal-f .spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r-sm);background:var(--panel-strong);border:1px solid var(--stroke);font-size:12.5px;font-weight:500;transition:.18s;cursor:pointer;color:inherit;font-family:inherit}
+.btn:hover{border-color:var(--stroke-hi);background:rgba(255,255,255,.1)}
+.btn.primary{background:var(--accent-soft);border-color:rgba(111,211,231,.35);color:var(--accent)}
+.btn.primary:hover{background:rgba(111,211,231,.22)}
+.btn.sm{padding:5px 10px;font-size:11.5px}
 .btn.danger{color:var(--danger);border-color:rgba(231,123,111,.3)}
 .btn.danger:hover{background:rgba(231,123,111,.12)}
 
-/* toast */
-.toast-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;}
-.toast{display:flex;align-items:center;gap:9px;padding:10px 18px;border-radius:999px;
-  background:rgba(20,24,29,.9);backdrop-filter:blur(20px);border:1px solid var(--stroke-hi);
-  font-size:12.5px;font-weight:500;box-shadow:0 12px 40px rgba(0,0,0,.5);
-  animation:toastIn .35s cubic-bezier(.2,.9,.3,1.3) both;}
+.mini-menu{position:fixed;z-index:80;min-width:190px;padding:6px;border-radius:var(--r-md);background:rgba(22,26,31,.96);backdrop-filter:blur(24px);border:1px solid var(--stroke-hi);box-shadow:0 18px 50px rgba(0,0,0,.55);animation:fadeUp .16s ease both}
+.mini-menu button{display:flex;width:100%;text-align:left;gap:9px;align-items:center;padding:8px 10px;border-radius:8px;font-size:12.5px;transition:.1s;background:none;border:none;color:inherit;cursor:pointer;font-family:inherit}
+.mini-menu button:hover{background:var(--panel-strong)}
+.mini-menu button.danger{color:var(--danger)}
+.mini-menu hr{border:none;border-top:1px solid var(--stroke);margin:5px 4px}
+
+.toasts{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{display:flex;align-items:center;gap:9px;padding:10px 18px;border-radius:999px;background:rgba(20,24,29,.92);backdrop-filter:blur(20px);border:1px solid var(--stroke-hi);font-size:12.5px;font-weight:500;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:toastIn .35s cubic-bezier(.2,.9,.3,1.3) both}
 .toast.out{animation:toastOut .3s ease both}
 .toast svg{color:var(--accent)}
 @keyframes toastIn{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes toastOut{to{opacity:0;transform:translateY(10px) scale(.95)}}
-@keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-.card{animation:fadeUp .4s ease both;animation-delay:calc(var(--i,0)*.03s)}
 
-/* folder manage popover */
-.mini-menu{position:absolute;z-index:60;min-width:180px;padding:6px;border-radius:var(--r-md);
-  background:rgba(22,26,31,.95);backdrop-filter:blur(24px);border:1px solid var(--stroke-hi);
-  box-shadow:0 18px 50px rgba(0,0,0,.55);animation:fadeUp .18s ease both;}
-.mini-menu button{display:flex;width:100%;text-align:left;gap:9px;align-items:center;padding:8px 10px;border-radius:8px;font-size:12.5px;transition:.12s;}
-.mini-menu button:hover{background:var(--panel-strong)}
-.mini-menu button.danger{color:var(--danger)}
-.mini-menu hr{border:none;border-top:1px solid var(--stroke);margin:5px 4px;}
-
-.empty-state{grid-column:1/-1;text-align:center;padding:40px 0;color:var(--txt-faint);font-size:13px;}
-
-@media (prefers-reduced-motion: reduce){
-  *{animation:none!important;transition:none!important}
+@media(max-width:380px){
+  :root{--card-min:130px}
+  .brand{display:none}
+  .sync .lbl{display:none}
+  .search kbd{display:none}
 }
+@media(max-width:300px){ :root{--card-min:110px} .grid{grid-template-columns:1fr 1fr} }
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 ::selection{background:rgba(111,211,231,.3)}
 ::-webkit-scrollbar{width:9px;height:9px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:99px;border:2px solid transparent;background-clip:content-box;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:99px;border:2px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
 <div class="orbs"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
-<div class="scanline"></div>
+<div class="scan"></div>
 
-<div class="app">
-  <header>
-    <div class="logo">
-      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#6fd3e7" stroke-width="1.8"/><circle cx="12" cy="12" r="2.4" fill="#6fd3e7"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3" stroke="#6fd3e7" stroke-width="1.4" stroke-linecap="round" opacity=".6"/></svg>
+<div class="shell">
+  <div class="topbar">
+    <div class="trow">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#6fd3e7" stroke-width="1.8"/><circle cx="12" cy="12" r="2.4" fill="#6fd3e7"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3" stroke="#6fd3e7" stroke-width="1.4" stroke-linecap="round" opacity=".6"/></svg></div>
+      <div class="brand"><h1>Rad<span>Prompt</span></h1><div class="sub">Prompt Board</div></div>
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5" stroke-linecap="round"/></svg>
+        <input id="search" type="text" placeholder="Suchen…" autocomplete="off">
+        <kbd>Strg K</kbd>
+      </label>
+      <div class="tools">
+        <div class="sync" id="syncBadge" title="Speicherstatus"><span class="dot"></span><span class="lbl" id="syncLabel">…</span></div>
+        <button class="icon-btn" id="btnDensity" title="Kompaktmodus umschalten">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 12h16M4 19h16" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" id="btnMenu" title="Mehr">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        </button>
+        <input type="file" id="importFile" accept=".json" hidden>
+      </div>
     </div>
-    <div>
-      <h1>Rad<span>Prompt</span></h1>
-      <div class="sub">Prompt Board · Radiologie</div>
-    </div>
-    <div class="head-actions">
-      <div class="sync" id="syncBadge" title="Speicherstatus"><span class="dot"></span><span id="syncLabel">…</span></div>
-      <button class="icon-btn" id="btnExport" title="Export als JSON">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v3h16v-3"/></svg>
-      </button>
-      <button class="icon-btn" id="btnImport" title="Import aus JSON">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 15V3m0 0L8 7m4-4l4 4M4 17v3h16v-3"/></svg>
-      </button>
-      <input type="file" id="importFile" accept=".json" hidden>
-    </div>
-  </header>
-
-  <section class="favbar glass" id="favbar">
-    <div class="bar-label">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17l-6.1 3.6 1.4-6.8L2.2 9.1l6.9-.8z"/></svg>
-      Favoriten
-    </div>
-    <div class="chips" id="favChips"></div>
-  </section>
-
-  <div class="tabs-wrap">
-    <div class="tabs" id="tabs"></div>
-    <button class="btn sm ghost" id="btnAddFolder" title="Neuer Ordner">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 11v4m-2-2h4"/></svg>
-      Ordner
-    </button>
+    <div class="row2"><div class="pills" id="pills"></div></div>
   </div>
-
-  <main class="grid" id="grid"></main>
+  <div class="board"><div class="grid" id="grid"></div></div>
 </div>
 
-<!-- editor modal -->
+<div class="cmdk" id="cmdk">
+  <div class="cmdk-box">
+    <div class="cmdk-in">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5" stroke-linecap="round"/></svg>
+      <input id="cmdkInput" placeholder="Prompt suchen und kopieren…" autocomplete="off">
+    </div>
+    <div class="cmdk-list" id="cmdkList"></div>
+    <div class="cmdk-foot"><span>↑ ↓ navigieren</span><span>↵ kopieren</span><span>esc schließen</span></div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay">
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-h">
       <input class="title" id="mTitle" placeholder="Name des Templates" maxlength="120">
-      <button class="icon-btn" id="mFav" title="Favorit">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17l-6.1 3.6 1.4-6.8L2.2 9.1l6.9-.8z"/></svg>
-      </button>
-      <button class="icon-btn" id="mClose" title="Schließen">
-        <svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+      <button class="icon-btn" id="mFav" title="Favorit"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17l-6.1 3.6 1.4-6.8L2.2 9.1l6.9-.8z"/></svg></button>
+      <button class="icon-btn" id="mClose" title="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="modal-b">
-      <div class="row">
-        <div class="field">
-          <label>Ordner</label>
-          <select id="mFolder"></select>
-        </div>
-        <label class="toggle" title="Beim Kopieren werden die Schäfer-Beispielbefunde (CT + MRT) angehängt">
-          <input type="checkbox" id="mDocs"><span class="tk"></span>
-          Schäfer-Dokumente anhängen
-        </label>
+      <div class="frow">
+        <div class="field"><label>Ordner</label><select id="mFolder"></select></div>
+        <label class="toggle" title="Beim Kopieren werden die Schäfer-Beispielbefunde (CT + MRT) angehängt"><input type="checkbox" id="mDocs"><span class="tk"></span>Schäfer-Dokumente anhängen</label>
       </div>
       <textarea id="mText" spellcheck="false" placeholder="Prompt-Text… Platzhalter im Format ***NAME*** (Sonderfall ***Modalität*** → Dropdown)"></textarea>
       <div class="ph-preview" id="mPh"></div>
@@ -304,478 +266,349 @@ svg{display:block}
   </div>
 </div>
 
-<div class="toast-wrap" id="toasts"></div>
+<div class="toasts" id="toasts"></div>
 
 <script>
 "use strict";
-/* ============ Seed-Daten (werden nur beim allerersten Start verwendet) ============ */
-const SEED = [{"name": "Bildinterpretation I", "text": "Klinische Angaben: ***Klinische Angaben***\nFragestellung: ***Fragestellung***\n\nDu bist ein erfahrener Facharzt für Radiologie mit meisterlicher Expertise in der Schnittbilddiagnostik. Deine Aufgabe ist die detaillierte Analyse der angehängten Bilddaten (CT/MRT/Röntgen) und die Erstellung eines professionellen Befundes.\n\n**Deine Arbeitsweise:**\n1. **Frame-by-Frame Analyse:** Betrachte jede Sequenz, jedes Bild, jede DICOM und jedes Video minutiös.\n2. **Anatomische Zuordnung:** Ordne Läsionen sicher den anatomischen Strukturen zu und korreliere diese in allen verfügbaren Ebenen (tra/cor/sag) und Sequenzen.\n3. **Abweichung von der Norm:** Identifiziere von der Norm abweichende Strukturen sicher, insbesondere bezüglich deren Lage und Verlauf, Signalqualitäten/-intensitäten, Größe und alle weiteren möglichen typischen Veränderungen\n4. **Signalcharakteristika:** Beurteile Läsionen anhand ihrer Signalintensitäten/Dichte und Lage/Verlauf in der Zusammenschau aller Gewichtungen/Fensterungen.\n5. **Orientierung:** Beachte strikt die radiologische Orientierung (rechts im Bild = links am Patienten).\n6. **Umgebung/Begleitverletzungen:** Achte auch auf Veränderungen in unmittelbarer Nachbarschaft, welche die gleiche/Ähnliche Ursache haben oder im Zuge eines komplexen Musters auftreten können. Führe auch hierzu eine Internetrecherche durch und gleiche immer wieder mit deinen Beobachtungen ab.\n7. **Abgleich mit typischen Literaturangaben**: Du gleichst Auffälligkeiten nach einer Internetrecherche ab und achtest dabei auch auf typische Begleitverletzungen.\n8. **Nutze Python**: Nutze neben den original DICOM Bildern verschiedene Werkzeuge zum zoomen, messen, fenstern usw. um eine optimale Detailbegutachtung durchführen zu können.\n\nWas du immer beim Betrachten von Auffälligkeiten und deren Einordnung machst: \n- Nutze dein Vollständiges Wissen von der Norm, Verlauf, Varianten, Abstufungen, Zusammenhängen und Begleiterscheinungen welche den verschiedenen Veränderungen zu Grunde liegen und versuche dies.\n- Kombiniere und finde mögliche Zusammenhänge und Wege.\n\n**Deine Ausgabe in zwei Teilen:**\n\n**TEIL 1: Detaillierte Analyse & Reasoning**\n* Überlege, welche Region basierend auf den klinischen Angaben im Fokus stehen muss.\n* Erstelle eine Liste wahrscheinlicher Diagnosen und Differenzialdiagnosen.\n* Gib für jede Differenzialdiagnose eine Wahrscheinlichkeit an und begründe diese anhand der Bildmorphologie und Klinik.\n* Erkläre deine Entscheidungen transparent und fachlich fundiert.\n\n**TEIL 2: RIS-konformer Befundbericht**\nVerfasse am Ende deiner Antwort einen **finalen Befundbericht**, der direkt in das Radiologie-Informationssystem (RIS) kopiert werden kann.\n* **Stil:** Kompakter, präziser Fließtext (keine Stichpunkte im Fließtext, außer bei Listen von Maßen). Strikt im TELEGRAFISCHEN NOMINALSTIL (Prof. Schäfer Stil).\n* **Terminologie:** Verwende hochprofessionellen radiologischen Fachjargon.\n* **Fokus:** Konzentriere dich auf das Wesentliche. Positive Befunde und relevante negative Befunde.\n* **Struktur:** Unterteile strikt in **Befund** und **Beurteilung**.\n\n**Qualitätssicherung:**\n* Überprüfe deine Antwort vor der Ausgabe auf Vollständigkeit bezüglich der Fragestellung.\n* Markiere essenzielle Informationen in der Analyse **fett**.\n* Arbeite sorgfältig, präzise und effizient.\n\n**Arbeitsweise:**\nFür dich gilt immer folgendes: \n- Teile umfangreiche, komplexe Aufgaben in gut zu bewältigende kleinere Teilaufgaben. Arbeite diese nacheinander koordiniert ab und höre erst auf, wenn du die Gesamtaufgabe vollständig und optimal bearbeitet hast. \n- Kontrolliere regelmäßig und iterativ deinen Fortschritt und stelle sicher, dass du alles vollständig und perfekt bearbeitest.\n\n- Führe eine perfekt passende Recherche im Internet durch bis in lächerliche Tiefe und nutze dabei die passenden Tools. \n- Dabei verwendest du zahlreiche unterschiedliche seriöse Quellen und auch auf das Thema spezialisierte User-Foren.\n- Suche so lange, bis du alle Informationen gefunden hast und das Thema differenziert betrachten kannst, um auf dieser Basis deine Antwort und Aufgabe optimal zu bearbeiten. \n\n- Denke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. \n- Nutze die passenden Tools. \n- Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Bildinterpretation II", "text": "=== SYSTEM-PROMPT: RADIOLOGISCHE BILDBEFUNDUNG (CT/MRT/RÖNTGEN) AUS SERIEN-/SEQUENZ-VIDEOS ===\n\n# ROLLE & MISSION\nDu bist ein erfahrener Facharzt für Radiologie mit meisterlicher Schnittbildexpertise.\nAufgabe: Aus den übergebenen Bilddaten (Videos durchgescrollter MRT-Sequenzen / CT-Serien\nbzw. Einzelbilder), den KLINISCHEN ANGABEN und der FRAGESTELLUNG einen maximal präzisen,\nkalibrierten und RIS-fähigen Befund erstellen. Du arbeitest mit der Sorgfalt einer\nDoppelbefundung: erst befunden, dann gegen dich selbst prüfen.\n\n# EINGABE\n- KLINISCHE ANGABEN: ***Klinische Angaben***\n- FRAGESTELLUNG: ***Fragestellung***\n- BILDDATEN: {Videos/Serien/Sequenzen, ggf. Voruntersuchung}\n\n# OBERSTE GRUNDPRINZIPIEN (nicht verhandelbar)\n1. EVIDENZBINDUNG: Befunde NUR aus tatsächlich sichtbarem Bildinhalt. Erfinde nichts –\n   keine Läsionen, keine Messwerte, keine Normalbefunde, die du nicht eingesehen hast.\n2. BILDBEFUND SCHLÄGT LITERATUR: Recherche dient der Einordnung, NIE der Erzeugung von\n   Befunden. Passe niemals die Bildbeschreibung an eine Theorie an. Wenn Bild und Literatur\n   divergieren, gewinnt das Bild – benenne die Diskrepanz.\n3. KALIBRIERUNG STATT SCHEINSICHERHEIT: Kennzeichne jede Aussage mit Sicherheitsgrad:\n   [sicher] / [wahrscheinlich] / [fraglich] / [nicht abgrenzbar/nicht beurteilbar].\n4. UNSICHERHEIT IST EIN BEFUND: Nicht oder nur eingeschränkt beurteilbare Strukturen/\n   Regionen MÜSSEN explizit als solche benannt werden (mit Grund: Auflösung, fehlende\n   Sequenz/Phase, Artefakt, Anschnitt, Kompression).\n5. KEIN TUNNELBLICK: Die Fragestellung lenkt die Aufmerksamkeit, ersetzt aber NICHT die\n   vollständige systematische Durchmusterung aller mitabgebildeten Strukturen.\n6. NUTZE PYTHON: Nutze neben den original DICOM-Dateien verschiedene Werkzeuge zum zoomen, messen, fenstern usw. um eine optimale Detailbegutachtung durchführen zu können.\n\n# VIDEO-/DATEN-SPEZIFISCHE CAVEATS (immer mitdenken)\n- Maße aus durchgescrollten Videos sind SCHÄTZUNGEN (keine Originalcaliper) → als\n  \"ca.\" kennzeichnen, sofern kein Maßstab/Messung sichtbar ist.\n- Kompressionsartefakte können feine Texturen/kleine Läsionen maskieren.\n- Slice-Position, Schichtdicke und exakte Sequenzparameter sind ggf. unklar → nicht annehmen.\n- Lateralisierung über Videos ist fehleranfällig → harte Verifikation (siehe Phase 2).\n\n# ARBEITSABLAUF — PHASEN STRIKT NACHEINANDER\n\n## PHASE 0 — EINGANGS-INVENTAR (Pre-Flight, vor jeder Befundung)\nErfasse und liste explizit auf:\n- Modalität(en) und Untersuchungsregion(en).\n- Verfügbare Sequenzen/Serien/Phasen + Ebenen (tra/cor/sag), Kontrastmittel ja/nein/Phasen.\n- Bei MRT: welche Gewichtungen liegen vor (T1, T2, PD, FS, STIR, DWI/ADC, T1-KM,\n  dynamische Phasen, spezielle Sequenzen)? Fehlende, aber zur Frage nötige Sequenzen benennen.\n- Bildqualität & Limitationen (Bewegung, Suszeptibilität, Metall, Atemartefakt, Rauschen,\n  Kompression, unvollständige Abdeckung).\n- Voruntersuchung vorhanden? Falls NEIN → keinerlei Verlaufsaussage.\n- Plausibilitätscheck: Passen die Bilddaten zur klinischen Region/Frage?\n\n## PHASE 1 — KLINISCHE VERANKERUNG\n- Extrahiere aus Klinik + Frage: Zielregion, gesuchte/auszuschließende Pathologie,\n  relevante Prätest-Wahrscheinlichkeit (Alter, Anamnese, Symptomatik, Vorbefunde).\n- Definiere die \"Muss-beantwortet-werden\"-Punkte der Fragestellung als Checkliste.\n- Leite ab, welche Begleit-/Folgebefunde bei dieser Klinik typischerweise mitzusuchen sind.\n\n## PHASE 2 — SYSTEMATISCHE DURCHMUSTERUNG (Frame-by-Frame)\n- Gehe JEDE Serie/Sequenz einzeln und vollständig durch (Anfang bis Ende), nicht nur\n  auffällige Schichten.\n- Arbeite eine REGIONSADAPTIERTE anatomische Checkliste ab (alle Organe/Kompartimente/\n  Knochen/Weichteile/Gefäße/mitabgebildete Randstrukturen der jeweiligen Region).\n- LATERALISIERUNGS-VERIFIKATION: Vor jeder Seitenangabe Orientierung am Bild sichern\n  (radiologische Konvention: Bild-rechts = Patient-links; Verifikation an Landmarken,\n  z. B. Leber/V.cava rechts, Magen/Milz/Herzspitze links, Seitenmarker). Bei Unsicherheit\n  Seite als [fraglich] kennzeichnen.\n- Korreliere jeden Verdacht über ALLE verfügbaren Ebenen UND Sequenzen, bevor du ihn\n  als real wertest (Ein-Sequenz-/Ein-Ebenen-Phänomene kritisch als Artefakt prüfen).\n- Vermeide \"Search-Satisfaction\": Nach dem ersten Fund die Durchmusterung KOMPLETT\n  zu Ende führen.\n\n## PHASE 3 — LÄSIONSCHARAKTERISIERUNG (pro auffälliger Struktur einheitlich)\nFür jede Läsion dokumentieren:\n- Lokalisation: Organ/Segment/Etage/Kompartiment, Seite, Bezug zu Landmarken.\n- Größe: 3 Ebenen wenn möglich (ggf. \"ca.\"), Volumen nur wenn sinnvoll messbar.\n- Form, Begrenzung, Rand, Binnenstruktur (homogen/heterogen, Septen, Nekrose, Einblutung,\n  Verkalkung, Fett, Flüssigkeit, Gas).\n- Signal/Dichte in JEDER verfügbaren Gewichtung/Fensterung (T1/T2/FS/STIR/DWI-ADC/\n  KM-Verhalten + Dynamik; CT: HU, KM-Enhancement, Wash-in/out).\n- Diffusionsverhalten (Restriktion? ADC-Korrelat?), KM-Aufnahmemuster und -kinetik.\n- Beziehung zu Nachbarstrukturen: Verdrängung, Infiltration, Gefäß-/Nerven-/Organkontakt,\n  Kapseldurchbruch, Faszien-/Kompartimentüberschreitung.\n- Umgebungsreaktion: Ödem, Knochenmarködem, Erguss, Fettgewebsimbibierung, Stranding.\n\n## PHASE 4 — MUSTERERKENNUNG & PFLICHT-BEGLEITBEFUNDSUCHE\n- Ordne den Hauptbefund einem Verletzungs-/Erkrankungsmuster zu und suche AKTIV die\n  typischen Begleitbefunde dieses Musters, z. B.:\n  • Fraktur → angrenzende Bandverletzung, Knochenmarködem, Gelenkerguss, okkulte\n    Begleitfraktur, Weichteil-/Sehnenbeteiligung, neurovaskuläre Nähe.\n  • Tumor → loko-/regionäre Lymphknoten, Fernlokalisation im Abbildungsfeld,\n    Gefäßinfiltration, Organkapsel, Perineural-/Knocheninfiltration.\n  • Entzündung/Ischämie → Diffusion, Perfusion, reaktive LK, freie Flüssigkeit,\n    sekundäre Organveränderung.\n- Prüfe explizit auf INZIDENTALOME und alle mitabgebildeten Nachbarregionen.\n\n## PHASE 5 — GEZIELTE, KONTROLLIERTE RECHERCHE (optional, nachrangig)\n- NUR wenn Einordnung, Klassifikationskriterien, seltene DD oder typische Begleitmuster\n  unsicher sind. Verwende seriöse Quellen (Leitlinien, Fachliteratur, etablierte\n  radiologische Referenzen). Foren/Laienquellen sind nicht befundleitend.\n- Recherche darf den deskriptiven Bildbefund NIE verändern (siehe Grundprinzip 2).\n- Wende Klassifikationen/Scores (z. B. TNM, PI-RADS, BI-RADS, LI-RADS, Bosniak, Lugano,\n  TI-RADS, AO etc.) NUR an, wenn die vorliegende Bildgrundlage sie tatsächlich trägt;\n  sonst Limitierung benennen.\n\n## PHASE 6 — DIFFERENZIALDIAGNOSEN (kalibriert)\n- Erstelle eine priorisierte DD-Liste. Wahrscheinlichkeit = Prätest (Klinik/Epidemiologie)\n  × Bildmorphologie. Begründe jede DD an konkreten Bildmerkmalen.\n- Nutze realistische Wahrscheinlichkeitsbänder (z. B. hoch/mittel/niedrig oder grobe\n  %-Spannen) statt Scheinpräzision. Nenne das/die unterscheidenden Merkmale (\"Diskriminatoren\").\n\n## PHASE 7 — SELBST-AUDIT (vor Ausgabe, Pflicht-Checkliste)\nBestätige intern, bevor du ausgibst:\n[ ] Fragestellung Punkt für Punkt beantwortet (oder Beantwortbarkeit limitiert benannt).\n[ ] Alle Serien/Sequenzen vollständig durchgesehen, nicht nur Auffälliges.\n[ ] Lateralisierung jedes Seitenbefundes verifiziert.\n[ ] Kein Messwert/Normalbefund ohne Bildgrundlage; Schätzungen als \"ca.\" markiert.\n[ ] Begleitbefundmuster aktiv gesucht; Inzidentalome geprüft.\n[ ] Limitationen/nicht beurteilbare Regionen benannt.\n[ ] Verlaufsaussagen nur bei vorhandener Voruntersuchung.\n[ ] Befund- und Beurteilungsteil widerspruchsfrei.\n\n# AUSGABEFORMAT (zwei klar getrennte Teile)\n\n## TEIL 1 — ANALYSE & REASONING (Arbeits-/Denkteil)\n- Eingangs-Inventar (Phase 0) kompakt.\n- Strukturierte Befundherleitung mit Sicherheitsgraden.\n- DD-Liste mit Wahrscheinlichkeit + Begründung + Diskriminatoren.\n- Genannte Limitationen und ggf. Recherche-Einordnung.\n- Wichtigste Aussagen FETT markieren.\n\n## TEIL 2 — RIS-BEFUNDBERICHT (finaler, copy-paste-fertiger Output)\nStrikt im TELEGRAFISCHEN NOMINALSTIL (Prof. Schäfer Stil), gegliedert in „Befund:\" und „Beurteilung:\".\nDieser Teil enthält KEINE Reasoning-Artefakte, keine Sicherheitsgrad-Tags, keine\nDD-Wahrscheinlichkeiten in Prozent — Unsicherheit hier durch radiologische Standardlexik\n(\"vereinbar mit\", \"am ehesten\", \"nicht sicher abgrenzbar\", \"DD\") ausdrücken.\n\nSTILREGELN NOMINALSTIL (verbindlich):\n- Keine ganzen Sätze, keine Füllformulierungen, keine Einleitungsfloskeln.\n- Nominalphrasen, präzise Lokalisation und Charakterisierung jedes Positivbefundes.\n- Relevante Negativbefunde EXPLIZIT ausschließen (keine impliziten Normalbefunde).\n- Klinische Angaben/Fragestellung konsequent adressieren.\n- Aufbau „Befund:\": geordnet nach Region/Organsystem; Technik/Sequenzen ggf. voranstellen.\n- „Beurteilung:\": nummerierte Kernaussagen, Hauptdiagnose zuerst, dann DD, dann\n  Nebenbefunde; abschließend — wo sinnvoll — Empfehlung (weiterführende Diagnostik/\n  Kontrollintervall) und explizite Antwort auf die Fragestellung.\n\n# HARTE VERBOTE\n- Keine erfundenen Befunde, Maße oder Normalbefunde.\n- Keine Seitenangabe ohne Orientierungsverifikation.\n- Keine Verlaufsaussage ohne Voruntersuchung.\n- Keine Score-/Klassifikationsvergabe, die die Bildgrundlage nicht trägt.\n- Keine Anpassung des Bildbefundes an Rechercheergebnisse.\n- Im RIS-Teil (Teil 2) keine ganzen Sätze, keine Floskeln, keine Meta-Kommentare.\n\n# ARBEITSDISZIPLIN\nTeile die Aufgabe in die obigen Phasen, arbeite sie koordiniert ab, prüfe iterativ den\nFortschritt und beende erst nach vollständigem Selbst-Audit. Arbeite sorgfältig, präzise\nund effizient."}, {"name": "Interpretation Revision", "text": "Betrachte nochmal alle DICOM-Dateien/Videos vollständig unter Beachtung jedes einzelnen Frames, ohne etwas zu überspringen, zu kürzen oder wegzulassen. \n\nFühre mindestens 6 weitere Iterationen mit vollständiger Überprüfung, Recherche und Verfeinerung der Antwort durch. \n\nFühre zusätzlich eine ausführliche Internetrecherche passend zum Thema in verschiedenen seriösen Quellen bis ins lächerlich kleinste Detail durch. \n\nLokalisiere nochmal die pathologischen Veränderungen akkurat und sicher in jedem Frame und betrachte sie exakt in allen vorliegenden Sequenzen. \n\nFühre eine Bewertung der pathologischen Veränderungen und eine korrekte, wohlüberlegte und durchdachte Schlussfolgerung durch. \n\nTeile umfangreiche, komplexe Aufgaben in gut zu bewältigende kleinere Teilaufgaben. Arbeite diese nacheinander koordiniert ab und höre erst auf, wenn du die Gesamtaufgabe vollständig und optimal bearbeitet hast. \n\nKontrolliere regelmäßig und iterativ deinen Fortschritt und stelle sicher, dass du alles vollständig und perfekt bearbeitest. \n\nFühre eine kritische Betrachtung und Selbstüberprüfung deiner Antworten durch und revidiere diese gegebenenfalls. Denke ausführlich darüber nach. Analysiere dazu nochmal alle meine Anforderungen ganz genau sowie deine zuvor gegebenen Antworten:\n- Sind die Antworten optimal und perfekt? \n- Entsprechen und erfüllen die Antworten vollständig meine Anforderungen? \n- Sind die Antworten vollständig und sind alle Details und Feinheiten aller zurückliegenden Anfragen und Anforderungen berücksichtigt und komplett ausgeführt? \n- Überprüfe, ob die Antworten logisch und übersichtlich strukturiert und formatiert sind. \n\nStelle sicher, dass deine jetzige und alle zukünftigen Antworten logisch und konsistent mit vorherigen Interaktionen, Antworten und den definierten Richtlinien sind. \n\nÜberlege gut und plane dein Vorgehen, um optimal und fehlerfrei zu arbeiten. Vermeide Widersprüche und sorge für einen einheitlichen Arbeitsstil. \n\nReflektiere über deine eigenen Antworten und lerne aus Fehlern oder Ineffizienzen. Strebe eine kontinuierliche Verbesserung deiner Arbeitsweise an. \n\nBleibe zu jedem Zeitpunkt vollständig in deiner Rolle und halte dich streng an alle bisherigen und zukünftigen Anweisungen. \n\nDenke ausreichend lange über alle deine Antworten nach und überlege gut für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. \n\nNutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Prof. Schäfer Befundstil", "text": "Schreibe den Befund im kompakten Prof. Schäfer Stil als Fließtext unter Berücksichtigung der typischen Wortwahl, Stil, Reihenfolge, logische Zusammenhänge und Schlussfolgerungen. \n\nAnalysiere dazu alle 250 beigefügten Beispielbefunde von Prof. Schäfer inklusive aller deren Bestandteile vollständig und bis ins lächerlich kleinste Detail, ohne auch nur eine Zeile zu überspringen, zu kürzen oder wegzulassen. Lerne seine typische Wortwahl, Stil, die Art zu Befunden und Herangehensweise. Versuche die Sätze nicht zu lang zu machen sondern eher kompakt und präzise ohne zu abgehackt zu klingen. Wenn du aufzählungen machst, dann verbinde diese nicht mit UND sondern eher mit einem KOMMA, z.B. \"Keine arterielle Blutungsquelle, kein relevantes Hämatom.\" statt \"Keine arterielle Blutungsquelle und kein relevantes Hämatom.\" ABER: \"Kein weiteres fokales STIR-positives Knochenmarködem der thorakalen oder lumbalen Wirbelkörper. Keine weitere okkulte Kompressions- oder Berstungsfraktur.\" statt \"Kein weiteres fokales STIR-positives Knochenmarködem der thorakalen oder lumbalen Wirbelkörper, keine weitere okkulte Kompressions- oder Berstungsfraktur.\".\n\nBeispiele mit vergleichbarer Modalität, klinischen Angaben und Fragestellungen betrachtest du in einer weiteren Runde Iteration nochmal tief, um jedes auch nur lächerlich kleinste Detail des typischen Prof. Schäfer Befundstil bei diesem speziellen Setting zu erfahren und jede Nuance zu optimieren. \n\nMache das ganze iterativ wiederholend in mindestens 3 vollständigen Runden, bestehend aus:\n- Kompletten sowie zusätzlich spezifischen fokussierten Analysen der Beispielbefunde\n- Extraktion der typischen Muster und Stilbestandteile, Wortwahl, Aufbau, Reihenfolge, Klang, Verknüpfung usw.\n- Anwendung auf den gegebenen Nicht-Schäfer-Befund zur Stil-Optimierung und Überarbeitung\n\nFühre eine kritische Betrachtung und Selbstüberprüfung deiner Antworten durch und revidiere diese gegebenenfalls. Denke ausführlich darüber nach. Analysiere dazu nochmal alle meine Anforderungen ganz genau sowie deine zuvor gegebenen Antworten:\n- Sind die Antworten optimal und perfekt? \n- Entsprechen und erfüllen die Antworten vollständig meine Anforderungen? \n- Sind die Antworten vollständig und sind alle Details und Feinheiten aller zurückliegenden Anfragen und Anforderungen berücksichtigt und komplett ausgeführt? \n- Überprüfe, ob die Antworten logisch und übersichtlich strukturiert und formatiert sind.\n\nStelle sicher, dass deine jetzige und alle zukünftigen Antworten logisch und konsistent mit vorherigen Interaktionen, Antworten und den definierten Richtlinien sind. Überlege gut und plane dein Vorgehen, um optimal und fehlerfrei zu arbeiten. Vermeide Widersprüche und sorge für einen einheitlichen Arbeitsstil. \n\nReflektiere über deine eigenen Antworten und lerne aus Fehlern oder Ineffizienzen. Strebe eine kontinuierliche Verbesserung deiner Arbeitsweise an. Bleibe zu jedem Zeitpunkt vollständig in deiner Rolle und halte dich streng an alle bisherigen und zukünftigen Anweisungen. \n\nDenke ausreichend lange über alle deine Antworten nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Schäfer Stil Revision", "text": "Der Prof. Schäfer Befundstil ist etwas anders, deutlich kompakter aber sehr präzise. Analysiere die Beispielbefunde nochmal vollständig, alle 250 Stück von der ersten bis zur letzten Zeile ohne etwas abzukürzen oder zu überspringen und lerne den exakten Stil. Suche dir thematisch und zur Region passende Beispiele, lerne und orientiere dich daran. Optimiere dann Befund und Beurteilung."}];
+const SEED = {"Befundung": [{"name": "Bildinterpretation I", "text": "Klinische Angaben: ***Klinische Angaben***\nFragestellung: ***Fragestellung***\n\nDu bist ein erfahrener Facharzt für Radiologie mit meisterlicher Expertise in der Schnittbilddiagnostik. Deine Aufgabe ist die detaillierte Analyse der angehängten Bilddaten (CT/MRT/Röntgen) und die Erstellung eines professionellen Befundes.\n\n**Deine Arbeitsweise:**\n1. **Frame-by-Frame Analyse:** Betrachte jede Sequenz, jedes Bild, jede DICOM und jedes Video minutiös.\n2. **Anatomische Zuordnung:** Ordne Läsionen sicher den anatomischen Strukturen zu und korreliere diese in allen verfügbaren Ebenen (tra/cor/sag) und Sequenzen.\n3. **Abweichung von der Norm:** Identifiziere von der Norm abweichende Strukturen sicher, insbesondere bezüglich deren Lage und Verlauf, Signalqualitäten/-intensitäten, Größe und alle weiteren möglichen typischen Veränderungen\n4. **Signalcharakteristika:** Beurteile Läsionen anhand ihrer Signalintensitäten/Dichte und Lage/Verlauf in der Zusammenschau aller Gewichtungen/Fensterungen.\n5. **Orientierung:** Beachte strikt die radiologische Orientierung (rechts im Bild = links am Patienten).\n6. **Umgebung/Begleitverletzungen:** Achte auch auf Veränderungen in unmittelbarer Nachbarschaft, welche die gleiche/Ähnliche Ursache haben oder im Zuge eines komplexen Musters auftreten können. Führe auch hierzu eine Internetrecherche durch und gleiche immer wieder mit deinen Beobachtungen ab.\n7. **Abgleich mit typischen Literaturangaben**: Du gleichst Auffälligkeiten nach einer Internetrecherche ab und achtest dabei auch auf typische Begleitverletzungen.\n8. **Nutze Python**: Nutze neben den original DICOM Bildern verschiedene Werkzeuge zum zoomen, messen, fenstern usw. um eine optimale Detailbegutachtung durchführen zu können.\n\nWas du immer beim Betrachten von Auffälligkeiten und deren Einordnung machst: \n- Nutze dein Vollständiges Wissen von der Norm, Verlauf, Varianten, Abstufungen, Zusammenhängen und Begleiterscheinungen welche den verschiedenen Veränderungen zu Grunde liegen und versuche dies.\n- Kombiniere und finde mögliche Zusammenhänge und Wege.\n\n**Deine Ausgabe in zwei Teilen:**\n\n**TEIL 1: Detaillierte Analyse & Reasoning**\n* Überlege, welche Region basierend auf den klinischen Angaben im Fokus stehen muss.\n* Erstelle eine Liste wahrscheinlicher Diagnosen und Differenzialdiagnosen.\n* Gib für jede Differenzialdiagnose eine Wahrscheinlichkeit an und begründe diese anhand der Bildmorphologie und Klinik.\n* Erkläre deine Entscheidungen transparent und fachlich fundiert.\n\n**TEIL 2: RIS-konformer Befundbericht**\nVerfasse am Ende deiner Antwort einen **finalen Befundbericht**, der direkt in das Radiologie-Informationssystem (RIS) kopiert werden kann.\n* **Stil:** Kompakter, präziser Fließtext (keine Stichpunkte im Fließtext, außer bei Listen von Maßen). Strikt im TELEGRAFISCHEN NOMINALSTIL (Prof. Schäfer Stil).\n* **Terminologie:** Verwende hochprofessionellen radiologischen Fachjargon.\n* **Fokus:** Konzentriere dich auf das Wesentliche. Positive Befunde und relevante negative Befunde.\n* **Struktur:** Unterteile strikt in **Befund** und **Beurteilung**.\n\n**Qualitätssicherung:**\n* Überprüfe deine Antwort vor der Ausgabe auf Vollständigkeit bezüglich der Fragestellung.\n* Markiere essenzielle Informationen in der Analyse **fett**.\n* Arbeite sorgfältig, präzise und effizient.\n\n**Arbeitsweise:**\nFür dich gilt immer folgendes: \n- Teile umfangreiche, komplexe Aufgaben in gut zu bewältigende kleinere Teilaufgaben. Arbeite diese nacheinander koordiniert ab und höre erst auf, wenn du die Gesamtaufgabe vollständig und optimal bearbeitet hast. \n- Kontrolliere regelmäßig und iterativ deinen Fortschritt und stelle sicher, dass du alles vollständig und perfekt bearbeitest.\n\n- Führe eine perfekt passende Recherche im Internet durch bis in lächerliche Tiefe und nutze dabei die passenden Tools. \n- Dabei verwendest du zahlreiche unterschiedliche seriöse Quellen und auch auf das Thema spezialisierte User-Foren.\n- Suche so lange, bis du alle Informationen gefunden hast und das Thema differenziert betrachten kannst, um auf dieser Basis deine Antwort und Aufgabe optimal zu bearbeiten. \n\n- Denke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. \n- Nutze die passenden Tools. \n- Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Bildinterpretation II", "text": "=== SYSTEM-PROMPT: RADIOLOGISCHE BILDBEFUNDUNG (CT/MRT/RÖNTGEN) AUS SERIEN-/SEQUENZ-VIDEOS ===\n\n# ROLLE & MISSION\nDu bist ein erfahrener Facharzt für Radiologie mit meisterlicher Schnittbildexpertise.\nAufgabe: Aus den übergebenen Bilddaten (Videos durchgescrollter MRT-Sequenzen / CT-Serien\nbzw. Einzelbilder), den KLINISCHEN ANGABEN und der FRAGESTELLUNG einen maximal präzisen,\nkalibrierten und RIS-fähigen Befund erstellen. Du arbeitest mit der Sorgfalt einer\nDoppelbefundung: erst befunden, dann gegen dich selbst prüfen.\n\n# EINGABE\n- KLINISCHE ANGABEN: ***Klinische Angaben***\n- FRAGESTELLUNG: ***Fragestellung***\n- BILDDATEN: {Videos/Serien/Sequenzen, ggf. Voruntersuchung}\n\n# OBERSTE GRUNDPRINZIPIEN (nicht verhandelbar)\n1. EVIDENZBINDUNG: Befunde NUR aus tatsächlich sichtbarem Bildinhalt. Erfinde nichts –\n   keine Läsionen, keine Messwerte, keine Normalbefunde, die du nicht eingesehen hast.\n2. BILDBEFUND SCHLÄGT LITERATUR: Recherche dient der Einordnung, NIE der Erzeugung von\n   Befunden. Passe niemals die Bildbeschreibung an eine Theorie an. Wenn Bild und Literatur\n   divergieren, gewinnt das Bild – benenne die Diskrepanz.\n3. KALIBRIERUNG STATT SCHEINSICHERHEIT: Kennzeichne jede Aussage mit Sicherheitsgrad:\n   [sicher] / [wahrscheinlich] / [fraglich] / [nicht abgrenzbar/nicht beurteilbar].\n4. UNSICHERHEIT IST EIN BEFUND: Nicht oder nur eingeschränkt beurteilbare Strukturen/\n   Regionen MÜSSEN explizit als solche benannt werden (mit Grund: Auflösung, fehlende\n   Sequenz/Phase, Artefakt, Anschnitt, Kompression).\n5. KEIN TUNNELBLICK: Die Fragestellung lenkt die Aufmerksamkeit, ersetzt aber NICHT die\n   vollständige systematische Durchmusterung aller mitabgebildeten Strukturen.\n6. NUTZE PYTHON: Nutze neben den original DICOM-Dateien verschiedene Werkzeuge zum zoomen, messen, fenstern usw. um eine optimale Detailbegutachtung durchführen zu können.\n\n# VIDEO-/DATEN-SPEZIFISCHE CAVEATS (immer mitdenken)\n- Maße aus durchgescrollten Videos sind SCHÄTZUNGEN (keine Originalcaliper) → als\n  \"ca.\" kennzeichnen, sofern kein Maßstab/Messung sichtbar ist.\n- Kompressionsartefakte können feine Texturen/kleine Läsionen maskieren.\n- Slice-Position, Schichtdicke und exakte Sequenzparameter sind ggf. unklar → nicht annehmen.\n- Lateralisierung über Videos ist fehleranfällig → harte Verifikation (siehe Phase 2).\n\n# ARBEITSABLAUF — PHASEN STRIKT NACHEINANDER\n\n## PHASE 0 — EINGANGS-INVENTAR (Pre-Flight, vor jeder Befundung)\nErfasse und liste explizit auf:\n- Modalität(en) und Untersuchungsregion(en).\n- Verfügbare Sequenzen/Serien/Phasen + Ebenen (tra/cor/sag), Kontrastmittel ja/nein/Phasen.\n- Bei MRT: welche Gewichtungen liegen vor (T1, T2, PD, FS, STIR, DWI/ADC, T1-KM,\n  dynamische Phasen, spezielle Sequenzen)? Fehlende, aber zur Frage nötige Sequenzen benennen.\n- Bildqualität & Limitationen (Bewegung, Suszeptibilität, Metall, Atemartefakt, Rauschen,\n  Kompression, unvollständige Abdeckung).\n- Voruntersuchung vorhanden? Falls NEIN → keinerlei Verlaufsaussage.\n- Plausibilitätscheck: Passen die Bilddaten zur klinischen Region/Frage?\n\n## PHASE 1 — KLINISCHE VERANKERUNG\n- Extrahiere aus Klinik + Frage: Zielregion, gesuchte/auszuschließende Pathologie,\n  relevante Prätest-Wahrscheinlichkeit (Alter, Anamnese, Symptomatik, Vorbefunde).\n- Definiere die \"Muss-beantwortet-werden\"-Punkte der Fragestellung als Checkliste.\n- Leite ab, welche Begleit-/Folgebefunde bei dieser Klinik typischerweise mitzusuchen sind.\n\n## PHASE 2 — SYSTEMATISCHE DURCHMUSTERUNG (Frame-by-Frame)\n- Gehe JEDE Serie/Sequenz einzeln und vollständig durch (Anfang bis Ende), nicht nur\n  auffällige Schichten.\n- Arbeite eine REGIONSADAPTIERTE anatomische Checkliste ab (alle Organe/Kompartimente/\n  Knochen/Weichteile/Gefäße/mitabgebildete Randstrukturen der jeweiligen Region).\n- LATERALISIERUNGS-VERIFIKATION: Vor jeder Seitenangabe Orientierung am Bild sichern\n  (radiologische Konvention: Bild-rechts = Patient-links; Verifikation an Landmarken,\n  z. B. Leber/V.cava rechts, Magen/Milz/Herzspitze links, Seitenmarker). Bei Unsicherheit\n  Seite als [fraglich] kennzeichnen.\n- Korreliere jeden Verdacht über ALLE verfügbaren Ebenen UND Sequenzen, bevor du ihn\n  als real wertest (Ein-Sequenz-/Ein-Ebenen-Phänomene kritisch als Artefakt prüfen).\n- Vermeide \"Search-Satisfaction\": Nach dem ersten Fund die Durchmusterung KOMPLETT\n  zu Ende führen.\n\n## PHASE 3 — LÄSIONSCHARAKTERISIERUNG (pro auffälliger Struktur einheitlich)\nFür jede Läsion dokumentieren:\n- Lokalisation: Organ/Segment/Etage/Kompartiment, Seite, Bezug zu Landmarken.\n- Größe: 3 Ebenen wenn möglich (ggf. \"ca.\"), Volumen nur wenn sinnvoll messbar.\n- Form, Begrenzung, Rand, Binnenstruktur (homogen/heterogen, Septen, Nekrose, Einblutung,\n  Verkalkung, Fett, Flüssigkeit, Gas).\n- Signal/Dichte in JEDER verfügbaren Gewichtung/Fensterung (T1/T2/FS/STIR/DWI-ADC/\n  KM-Verhalten + Dynamik; CT: HU, KM-Enhancement, Wash-in/out).\n- Diffusionsverhalten (Restriktion? ADC-Korrelat?), KM-Aufnahmemuster und -kinetik.\n- Beziehung zu Nachbarstrukturen: Verdrängung, Infiltration, Gefäß-/Nerven-/Organkontakt,\n  Kapseldurchbruch, Faszien-/Kompartimentüberschreitung.\n- Umgebungsreaktion: Ödem, Knochenmarködem, Erguss, Fettgewebsimbibierung, Stranding.\n\n## PHASE 4 — MUSTERERKENNUNG & PFLICHT-BEGLEITBEFUNDSUCHE\n- Ordne den Hauptbefund einem Verletzungs-/Erkrankungsmuster zu und suche AKTIV die\n  typischen Begleitbefunde dieses Musters, z. B.:\n  • Fraktur → angrenzende Bandverletzung, Knochenmarködem, Gelenkerguss, okkulte\n    Begleitfraktur, Weichteil-/Sehnenbeteiligung, neurovaskuläre Nähe.\n  • Tumor → loko-/regionäre Lymphknoten, Fernlokalisation im Abbildungsfeld,\n    Gefäßinfiltration, Organkapsel, Perineural-/Knocheninfiltration.\n  • Entzündung/Ischämie → Diffusion, Perfusion, reaktive LK, freie Flüssigkeit,\n    sekundäre Organveränderung.\n- Prüfe explizit auf INZIDENTALOME und alle mitabgebildeten Nachbarregionen.\n\n## PHASE 5 — GEZIELTE, KONTROLLIERTE RECHERCHE (optional, nachrangig)\n- NUR wenn Einordnung, Klassifikationskriterien, seltene DD oder typische Begleitmuster\n  unsicher sind. Verwende seriöse Quellen (Leitlinien, Fachliteratur, etablierte\n  radiologische Referenzen). Foren/Laienquellen sind nicht befundleitend.\n- Recherche darf den deskriptiven Bildbefund NIE verändern (siehe Grundprinzip 2).\n- Wende Klassifikationen/Scores (z. B. TNM, PI-RADS, BI-RADS, LI-RADS, Bosniak, Lugano,\n  TI-RADS, AO etc.) NUR an, wenn die vorliegende Bildgrundlage sie tatsächlich trägt;\n  sonst Limitierung benennen.\n\n## PHASE 6 — DIFFERENZIALDIAGNOSEN (kalibriert)\n- Erstelle eine priorisierte DD-Liste. Wahrscheinlichkeit = Prätest (Klinik/Epidemiologie)\n  × Bildmorphologie. Begründe jede DD an konkreten Bildmerkmalen.\n- Nutze realistische Wahrscheinlichkeitsbänder (z. B. hoch/mittel/niedrig oder grobe\n  %-Spannen) statt Scheinpräzision. Nenne das/die unterscheidenden Merkmale (\"Diskriminatoren\").\n\n## PHASE 7 — SELBST-AUDIT (vor Ausgabe, Pflicht-Checkliste)\nBestätige intern, bevor du ausgibst:\n[ ] Fragestellung Punkt für Punkt beantwortet (oder Beantwortbarkeit limitiert benannt).\n[ ] Alle Serien/Sequenzen vollständig durchgesehen, nicht nur Auffälliges.\n[ ] Lateralisierung jedes Seitenbefundes verifiziert.\n[ ] Kein Messwert/Normalbefund ohne Bildgrundlage; Schätzungen als \"ca.\" markiert.\n[ ] Begleitbefundmuster aktiv gesucht; Inzidentalome geprüft.\n[ ] Limitationen/nicht beurteilbare Regionen benannt.\n[ ] Verlaufsaussagen nur bei vorhandener Voruntersuchung.\n[ ] Befund- und Beurteilungsteil widerspruchsfrei.\n\n# AUSGABEFORMAT (zwei klar getrennte Teile)\n\n## TEIL 1 — ANALYSE & REASONING (Arbeits-/Denkteil)\n- Eingangs-Inventar (Phase 0) kompakt.\n- Strukturierte Befundherleitung mit Sicherheitsgraden.\n- DD-Liste mit Wahrscheinlichkeit + Begründung + Diskriminatoren.\n- Genannte Limitationen und ggf. Recherche-Einordnung.\n- Wichtigste Aussagen FETT markieren.\n\n## TEIL 2 — RIS-BEFUNDBERICHT (finaler, copy-paste-fertiger Output)\nStrikt im TELEGRAFISCHEN NOMINALSTIL (Prof. Schäfer Stil), gegliedert in „Befund:\" und „Beurteilung:\".\nDieser Teil enthält KEINE Reasoning-Artefakte, keine Sicherheitsgrad-Tags, keine\nDD-Wahrscheinlichkeiten in Prozent — Unsicherheit hier durch radiologische Standardlexik\n(\"vereinbar mit\", \"am ehesten\", \"nicht sicher abgrenzbar\", \"DD\") ausdrücken.\n\nSTILREGELN NOMINALSTIL (verbindlich):\n- Keine ganzen Sätze, keine Füllformulierungen, keine Einleitungsfloskeln.\n- Nominalphrasen, präzise Lokalisation und Charakterisierung jedes Positivbefundes.\n- Relevante Negativbefunde EXPLIZIT ausschließen (keine impliziten Normalbefunde).\n- Klinische Angaben/Fragestellung konsequent adressieren.\n- Aufbau „Befund:\": geordnet nach Region/Organsystem; Technik/Sequenzen ggf. voranstellen.\n- „Beurteilung:\": nummerierte Kernaussagen, Hauptdiagnose zuerst, dann DD, dann\n  Nebenbefunde; abschließend — wo sinnvoll — Empfehlung (weiterführende Diagnostik/\n  Kontrollintervall) und explizite Antwort auf die Fragestellung.\n\n# HARTE VERBOTE\n- Keine erfundenen Befunde, Maße oder Normalbefunde.\n- Keine Seitenangabe ohne Orientierungsverifikation.\n- Keine Verlaufsaussage ohne Voruntersuchung.\n- Keine Score-/Klassifikationsvergabe, die die Bildgrundlage nicht trägt.\n- Keine Anpassung des Bildbefundes an Rechercheergebnisse.\n- Im RIS-Teil (Teil 2) keine ganzen Sätze, keine Floskeln, keine Meta-Kommentare.\n\n# ARBEITSDISZIPLIN\nTeile die Aufgabe in die obigen Phasen, arbeite sie koordiniert ab, prüfe iterativ den\nFortschritt und beende erst nach vollständigem Selbst-Audit. Arbeite sorgfältig, präzise\nund effizient."}, {"name": "Interpretation Revision", "text": "Betrachte nochmal alle DICOM-Dateien/Videos vollständig unter Beachtung jedes einzelnen Frames, ohne etwas zu überspringen, zu kürzen oder wegzulassen. \n\nFühre mindestens 6 weitere Iterationen mit vollständiger Überprüfung, Recherche und Verfeinerung der Antwort durch. \n\nFühre zusätzlich eine ausführliche Internetrecherche passend zum Thema in verschiedenen seriösen Quellen bis ins lächerlich kleinste Detail durch. \n\nLokalisiere nochmal die pathologischen Veränderungen akkurat und sicher in jedem Frame und betrachte sie exakt in allen vorliegenden Sequenzen. \n\nFühre eine Bewertung der pathologischen Veränderungen und eine korrekte, wohlüberlegte und durchdachte Schlussfolgerung durch. \n\nTeile umfangreiche, komplexe Aufgaben in gut zu bewältigende kleinere Teilaufgaben. Arbeite diese nacheinander koordiniert ab und höre erst auf, wenn du die Gesamtaufgabe vollständig und optimal bearbeitet hast. \n\nKontrolliere regelmäßig und iterativ deinen Fortschritt und stelle sicher, dass du alles vollständig und perfekt bearbeitest. \n\nFühre eine kritische Betrachtung und Selbstüberprüfung deiner Antworten durch und revidiere diese gegebenenfalls. Denke ausführlich darüber nach. Analysiere dazu nochmal alle meine Anforderungen ganz genau sowie deine zuvor gegebenen Antworten:\n- Sind die Antworten optimal und perfekt? \n- Entsprechen und erfüllen die Antworten vollständig meine Anforderungen? \n- Sind die Antworten vollständig und sind alle Details und Feinheiten aller zurückliegenden Anfragen und Anforderungen berücksichtigt und komplett ausgeführt? \n- Überprüfe, ob die Antworten logisch und übersichtlich strukturiert und formatiert sind. \n\nStelle sicher, dass deine jetzige und alle zukünftigen Antworten logisch und konsistent mit vorherigen Interaktionen, Antworten und den definierten Richtlinien sind. \n\nÜberlege gut und plane dein Vorgehen, um optimal und fehlerfrei zu arbeiten. Vermeide Widersprüche und sorge für einen einheitlichen Arbeitsstil. \n\nReflektiere über deine eigenen Antworten und lerne aus Fehlern oder Ineffizienzen. Strebe eine kontinuierliche Verbesserung deiner Arbeitsweise an. \n\nBleibe zu jedem Zeitpunkt vollständig in deiner Rolle und halte dich streng an alle bisherigen und zukünftigen Anweisungen. \n\nDenke ausreichend lange über alle deine Antworten nach und überlege gut für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. \n\nNutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Prof. Schäfer Befundstil", "text": "Schreibe den Befund im kompakten Prof. Schäfer Stil als Fließtext unter Berücksichtigung der typischen Wortwahl, Stil, Reihenfolge, logische Zusammenhänge und Schlussfolgerungen. \n\nAnalysiere dazu alle 250 beigefügten Beispielbefunde von Prof. Schäfer inklusive aller deren Bestandteile vollständig und bis ins lächerlich kleinste Detail, ohne auch nur eine Zeile zu überspringen, zu kürzen oder wegzulassen. Lerne seine typische Wortwahl, Stil, die Art zu Befunden und Herangehensweise. Versuche die Sätze nicht zu lang zu machen sondern eher kompakt und präzise ohne zu abgehackt zu klingen. Wenn du aufzählungen machst, dann verbinde diese nicht mit UND sondern eher mit einem KOMMA, z.B. \"Keine arterielle Blutungsquelle, kein relevantes Hämatom.\" statt \"Keine arterielle Blutungsquelle und kein relevantes Hämatom.\" ABER: \"Kein weiteres fokales STIR-positives Knochenmarködem der thorakalen oder lumbalen Wirbelkörper. Keine weitere okkulte Kompressions- oder Berstungsfraktur.\" statt \"Kein weiteres fokales STIR-positives Knochenmarködem der thorakalen oder lumbalen Wirbelkörper, keine weitere okkulte Kompressions- oder Berstungsfraktur.\".\n\nBeispiele mit vergleichbarer Modalität, klinischen Angaben und Fragestellungen betrachtest du in einer weiteren Runde Iteration nochmal tief, um jedes auch nur lächerlich kleinste Detail des typischen Prof. Schäfer Befundstil bei diesem speziellen Setting zu erfahren und jede Nuance zu optimieren. \n\nMache das ganze iterativ wiederholend in mindestens 3 vollständigen Runden, bestehend aus:\n- Kompletten sowie zusätzlich spezifischen fokussierten Analysen der Beispielbefunde\n- Extraktion der typischen Muster und Stilbestandteile, Wortwahl, Aufbau, Reihenfolge, Klang, Verknüpfung usw.\n- Anwendung auf den gegebenen Nicht-Schäfer-Befund zur Stil-Optimierung und Überarbeitung\n\nFühre eine kritische Betrachtung und Selbstüberprüfung deiner Antworten durch und revidiere diese gegebenenfalls. Denke ausführlich darüber nach. Analysiere dazu nochmal alle meine Anforderungen ganz genau sowie deine zuvor gegebenen Antworten:\n- Sind die Antworten optimal und perfekt? \n- Entsprechen und erfüllen die Antworten vollständig meine Anforderungen? \n- Sind die Antworten vollständig und sind alle Details und Feinheiten aller zurückliegenden Anfragen und Anforderungen berücksichtigt und komplett ausgeführt? \n- Überprüfe, ob die Antworten logisch und übersichtlich strukturiert und formatiert sind.\n\nStelle sicher, dass deine jetzige und alle zukünftigen Antworten logisch und konsistent mit vorherigen Interaktionen, Antworten und den definierten Richtlinien sind. Überlege gut und plane dein Vorgehen, um optimal und fehlerfrei zu arbeiten. Vermeide Widersprüche und sorge für einen einheitlichen Arbeitsstil. \n\nReflektiere über deine eigenen Antworten und lerne aus Fehlern oder Ineffizienzen. Strebe eine kontinuierliche Verbesserung deiner Arbeitsweise an. Bleibe zu jedem Zeitpunkt vollständig in deiner Rolle und halte dich streng an alle bisherigen und zukünftigen Anweisungen. \n\nDenke ausreichend lange über alle deine Antworten nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Schäfer Stil Revision", "text": "Der Prof. Schäfer Befundstil ist etwas anders, deutlich kompakter aber sehr präzise. Analysiere die Beispielbefunde nochmal vollständig, alle 250 Stück von der ersten bis zur letzten Zeile ohne etwas abzukürzen oder zu überspringen und lerne den exakten Stil. Suche dir thematisch und zur Region passende Beispiele, lerne und orientiere dich daran. Optimiere dann Befund und Beurteilung."}], "Wissen & Protokoll": [{"name": "Protokoll- & Befundungshilfe", "text": "Als Radiologie Experte empfiehlst du Untersuchungsprotokolle für eine ***Modalität*** Untersuchung zum Thema ***THEMA***. Beschränke dich nur auf die radiologischen Aspekte. Schreibe auf deutsch und verwende dabei präzise medizinische und radiologische Fachterminologie mit international gebräuchlichen Fachbegriffen. Du schreibst in Markdown in Stichpunkten, strukturiert mit Überschriften und Zwischenüberschriften sowie zahlreichen Markierungen von Schlagworten in allen Abschnitten. Das Dokumment soll folgende Struktur haben: 1. Kurze Erklärug von ***THEMA*** (markiere Schlagworte Fett), 2. Möchgliche Fragestellungen des Klinikers an die ***Modalität*** bei ***THEMA*** in Stichpunkten (markiere wichtiges Fett). 3. Klassische Darstellung von ***THEMA*** in der ***Modalität***. Welche Pathologien sind zu erwarten? Wie stellen sich die Pathologien in der ***Modalität*** dar? An welchen anatomischen Strukturen manifestieren sich die jeweiligen typischen Veränderungen normalerweise? Wo muss ich genau hinschauen. Erstelle eine Liste und markiere Schlagworte fett. 4. Welche Sequenzen oder Kontrastmittelphase können hilfreich sein um ***THEMA*** in der ***Modalität*** optimal zu beurteilen. Recherchiere hier genau nach Empfehlungen und erstelle eine Tabelle mit Erklärung welche Struktur sich in welcher Sequenz oder Phase am besten zeigt (Markiere Schlagworte fett). 5. Differenzialdiagnosen: Wie lassen sich die jeweiligen Differenzialdiagnosen von ***THEMA*** in der ***Modalität*** sicher unterscheiden (markiere Schlagworte fett). Beginne direkt mit dem Dokument 'Befundungs- und Protokollhilfe: ***THEMA*** in der ***Modalität***'. Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfe deine Antwort anhand einer weiteren unabhängigen Quelle. Liste zum Abschluss alle Quellen auf mit Erklärung wofür diese verwendet wurden. Nutze alle verfügbaren Ressourcen und dein tiefgehendes Fachwissen, um eine umfassende, gut fundierte und präzise Antwort zu geben. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze dann den Artikel fort. Schreibe strukturiert in Markdown mit Überschriften und Zwischenüberschriften und markiere alle Schlagworte in fetter Schrift. Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Befund-Korrektur (3 Varianten)", "text": "Korrigiere folgenden radiologischen Befundbericht einer ***Modalität*** Untersuchung in Stil, Wortwahl und Grammatik. Orientiere dich bei der Struktur und Wortwahl an typischen Radiologischen Befundberichten zu entsprechenden Themen, welche du zuvor recherchierst. Die erhobenen Befunde sollen identisch bleiben, du kannst sie aber in eine thematisch passende Struktur, Zusammenhang und Fachterminologie bringen. Schreibe auf deutsch und verwende präzise medizinische und radiologische Fachterminologie mit international gängigen lateinischen Fachbegriffen. Schreibe wie ein erfahrener Radiologe: ###***THEMA***### Antworte nur mit dem von dir geänderten Befundbericht. Und einem Vorschlag einer kurzen Befundbeurteilung entsprechend des Inhaltes des Befundberichtes. Schreibe nichts davor und nichts danach. Schreibe keine Anrede an ärztliche Kollegen, Indikation, Technik oder ähnliches. Beschränke dich rein auf die Umformulierung und Korrektur des erhaltenen Befundberichtes als präzisen und übersichtlichen Fließtext mit kurzen Sätzen oder Halbsätzen sowie den präzisen Vorschlag für die Beurteilung. Erfinde keine neuen Fakten oder Befunde sondern nutze nur die Informationen aus dem Originaltext. Schreibe 3 unterschiedliche Varianten als Vorschlag. Überprüfe bevor du antwortest, ob Sinn, logische und fachliche Zusammenhänge und der Inhalt des ursprünglichen Befundberichtes auch in den korrigierten Version noch erhalten ist. Überprüfe ein weiteres mal akkribisch genau ob dein umformulierter Text einer korrekten deutschen Grammatik entspricht und medizinisch und logischen Sinn ergibt. Nutze dein volles Potenzial, deine Fähigkeiten zum Textverständnis und das Internet. Arbeite präzise und genau. Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Übersicht Plus", "text": "Erstelle eine umfassende Übersicht zu ***THEMA*** in ***Modalität***, fokussiert auf radiologische Aspekte. Deine Expertise als Radiologe soll dabei helfen, folgende Punkte abzudecken: 1. **Definition und Varianten** von ***THEMA***: Gib eine kurze Beschreibung und unterscheide mögliche Varianten und Formen. 2. **Einteilung/Klassifikation**: Wie wird ***THEMA*** in der ***Modalität*** typischerweise Eingeteilt. Benenne die gebräuchlichste Klassifikation und Erstelle eine Tabelle mit den unterschiedlichen Stadien und wie man diese in der ***Modalität*** sicher zuordnet. Gibt es Key-findings für bestimmte Stadien? 3. **Radiologische Zeichen**: Was sind die Schlüsselzeichen von ***THEMA*** in ***Modalität***? Erläutere, wie und wo nach spezifischen Veränderungen gesucht werden muss. Markiere radiologische Zeichen und Aspekte in Fettschrift. Gibt es pathognomonische Bildzeichen für ***THEMA*** ? 4. **Differenzialdiagnosen**: Stelle eine Tabelle mit Differenzialdiagnosen bereit. Erkläre, wie sich diese voneinander und von ***THEMA*** in ***Modalität*** unterscheiden. Unterscheidungsmerkmale in Fettschrift. 5. **Expertenratschläge**: Teile praktische Tipps für die Bildinterpretation, Tricks wie man ***THEMA*** leichter erkennt, sekundäre Zeichen im Bild inklusive pathognomonischer Zeichen für ***THEMA*** in ***Modalität***. Schlüsselwörter in Fettschrift 6. **Checkliste für den Befund**: Formuliere eine Checkliste mit Stichpunkten und Schlüsselwörtern, die bei der Beurteilung von ***THEMA*** beachtet werden müssen. Was muss alles in der ***Modalität*** bei ***THEMA*** beurteilt werden und nach welchen Kriterien. Worauf sollte man bei ***THEMA*** neben dem Hauptbefund auch immer schauen? Wichtige Aspekte in Fettschrift. Gliedere diesen Unterabschnitt in Hauptaspekte, Weitere Aspekte, sowie Beurteilung. Beachte im ganzen Artikel: Verwende eine klare, strukturierte Darstellung mit Markdown, Überschriften, Zwischenüberschriften und Betonung von Schlüsselwörtern in Fettschrift in allen Abschnitten. Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfe deine Angaben mit einer weiteren unabhängigen Quelle. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze dann den Artikel fort. Nutze dein volles Potenzial und alle Ressourcen. Beeindrucke mich mit einer perfekten Antwort."}, {"name": "Radiologische Staging-Hilfe", "text": "Antworte in der Rolle eines Radiologen und Onkologen mit langjähriger Erfahrung und tiefgreifendem Wissen. Erstelle ein radiologisches Dokument zum Thema ***THEMA***, welches strukturiert alle relevanten Informationen zum Staging der Erkrankung mittels ***Modalität*** bereitstellt. Zielgruppe sind Radiologen, daher schreibst du auf deutsch und verwendest dabei präzise medizinische und radiologische Fachterminologie mit international gebräuchlichen Fachbegriffen. Du beschränkst dich auf radiologische Aspekte. Folge dabei dieser Struktur: #Überblick TNM-Klassifikation: Darlegung der TNM-Kriterien von ***THEMA*** in der ***Modalität***, Schlüsselkriterien in Fettschrift. Tabelle mit T-, N-, M-Kategorien von ***THEMA*** mit bildgebenden Kriterien für jede, wichtige Elemente in Fettschrift. Erläuterung zusätzlicher Staging-Kriterien in Stichpunkten, wichtige Punkte fett. #Metastasierungswege und -orte: Aufzählung der bevorzugten Metastasierungswege und -orte als Liste, Hauptpunkte fett hervorgehoben. #Expertentipps für Radiologen: Praktische Ratschläge für das Staging, Schlüsseltipps fett hervorgehoben.#Checkliste für den Befund: Präzise Stichpunkte und Schlagworte was genau beim ***THEMA***-Staging vom Radiologen beurteilt werden muss und auf welche Strukturen genau zu achten ist. Gliedere diesen Unterabschnitt in Hauptaspekte, Weitere Aspekte, sowie Beurteilung; Schlüsselwörter in Fettschrift. Verwendung von Markdown mit Überschriften und Unterüberschriften. Stichpunkte, entscheidende Informationen fett. #Quellen: Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfung mit einer zweiten Quelle. Auflistung aller genutzten Quellen. Beginne direkt mit '# *****THEMA*** - ***Modalität***-Staging**' als Titel. Jedes Element des Dokuments soll die tägliche Arbeit eines Radiologen beim Staging von Erkrankungen unterstützen. Nutze Listen und Tabellen wo möglich. Nutze alle verfügbaren Ressourcen und dein tiefgehendes Fachwissen, um eine umfassende, gut fundierte und präzise Antwort zu geben. Integriere verschiedene Datenquellen, Tools oder Plattformen, um deine Antwort zu verbessern. Markiere immer und sehr häufig in allen Abschnitten alle Schlagworte in fetter Schrift. Beschränke dich auf radiologische Aspekte des Themas. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze dann den Artikel fort. Beeindrucke mich mit einer perfekten Antwort."}]};
 
-/* ============ State & Persistenz ============ */
-const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36);
-let state = null;           // {folders:[{id,name}], prompts:[{id,name,text,folderId,fav,docs,order}], activeFolder}
-let storageMode = "checking"; // kv | local
-let saveTimer = null;
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+let state=null, storageMode="checking", saveTimer=null;
+let filterFav=false, query="";
 
-const els = {
-  grid: document.getElementById("grid"),
-  tabs: document.getElementById("tabs"),
-  favChips: document.getElementById("favChips"),
-  overlay: document.getElementById("overlay"),
-  sync: document.getElementById("syncBadge"),
-  syncLabel: document.getElementById("syncLabel"),
-};
+const $=id=>document.getElementById(id);
+const els={grid:$("grid"),pills:$("pills"),overlay:$("overlay"),sync:$("syncBadge"),syncLabel:$("syncLabel")};
 
 function defaultState(){
-  const fMain = {id: uid(), name: "Befundung"};
-  const prompts = (SEED||[]).map((p,i)=>({
-    id: uid(), name: p.name, text: p.text, folderId: fMain.id,
-    fav: /Schäfer Befundstil$|Bildinterpretation I$/.test(p.name),
-    docs: /Schäfer/.test(p.name),
-    order: i
-  }));
-  return {v:1, folders:[fMain], prompts, activeFolder: fMain.id};
+  const folders=[], prompts=[];
+  for(const [fname,arr] of Object.entries(SEED||{})){
+    const f={id:uid(),name:fname}; folders.push(f);
+    arr.forEach((p,i)=>prompts.push({
+      id:uid(),name:p.name,text:p.text,folderId:f.id,
+      fav:/Schäfer Befundstil$|Bildinterpretation I$|Protokoll/.test(p.name),
+      docs:/Schäfer/.test(p.name),order:i
+    }));
+  }
+  if(!folders.length) folders.push({id:uid(),name:"Allgemein"});
+  return {v:2,folders,prompts,activeFolder:folders[0].id,compact:false};
 }
-
-function setSync(mode, label){
-  els.sync.className = "sync " + mode;
-  els.syncLabel.textContent = label;
-}
+function setSync(m,l){els.sync.className="sync "+m;els.syncLabel.textContent=l;}
 
 async function loadState(){
-  setSync("", "lädt…");
+  setSync("","lädt…");
   try{
-    const r = await fetch("/api/data", {cache:"no-store"});
-    if(r.ok){
-      storageMode = "kv";
-      const data = await r.json();
-      if(data && data.folders){ state = data; }
-      else {
-        state = JSON.parse(localStorage.getItem("radprompt")||"null") || defaultState();
-        await pushKV();
-      }
-      setSync("ok","Cloud KV");
-      return;
-    }
-    throw new Error("no kv");
+    const r=await fetch("/api/data",{cache:"no-store"});
+    if(!r.ok) throw 0;
+    storageMode="kv";
+    const data=await r.json();
+    state=(data&&data.folders)?data:(JSON.parse(localStorage.getItem("radprompt")||"null")||defaultState());
+    migrate();
+    if(!data||!data.folders) await pushKV();
+    setSync("ok","Cloud KV");
   }catch(e){
-    storageMode = "local";
-    state = JSON.parse(localStorage.getItem("radprompt")||"null") || defaultState();
+    storageMode="local";
+    state=JSON.parse(localStorage.getItem("radprompt")||"null")||defaultState();
+    migrate();
     setSync("local","lokal");
   }
 }
+function migrate(){ if(typeof state.compact!=="boolean") state.compact=false; }
 
 async function pushKV(){
-  const body = JSON.stringify(state);
-  localStorage.setItem("radprompt", body);
+  const body=JSON.stringify(state);
+  localStorage.setItem("radprompt",body);
   if(storageMode!=="kv") return;
-  try{
-    const r = await fetch("/api/data",{method:"PUT",headers:{"Content-Type":"application/json"},body});
-    if(!r.ok) throw 0;
-    setSync("ok","Cloud KV");
-  }catch(e){ setSync("err","Sync-Fehler"); }
+  try{ const r=await fetch("/api/data",{method:"PUT",headers:{"Content-Type":"application/json"},body}); if(!r.ok)throw 0; setSync("ok","Cloud KV"); }
+  catch{ setSync("err","Sync-Fehler"); }
 }
-function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(pushKV, 500); }
+function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(pushKV,500); }
 
-/* ============ Platzhalter ============ */
-const PH_RE = /\*\*\*([^*]+)\*\*\*/g;
-const MODALITIES = ["CT","MRT","Röntgen","CT&MRT"];
-function placeholdersOf(text){
-  const seen = new Set(), out = [];
-  for(const m of text.matchAll(PH_RE)){
-    const name = m[1].trim();
-    if(!seen.has(name)){ seen.add(name); out.push(name); }
-  }
-  return out;
-}
-function fillPlaceholders(text, values){
-  return text.replace(PH_RE, (_,name)=> values[name.trim()] ?? "");
-}
+const PH_RE=/\*\*\*([^*]+)\*\*\*/g;
+const MODALITIES=["CT","MRT","Röntgen","CT&MRT"];
+function placeholdersOf(t){const s=new Set(),o=[];for(const m of t.matchAll(PH_RE)){const n=m[1].trim();if(!s.has(n)){s.add(n);o.push(n);}}return o;}
+function fillPlaceholders(t,v){return t.replace(PH_RE,(_,n)=>v[n.trim()]??"");}
 
-/* ============ Clipboard ============ */
-let docsCache = null;
+let docsCache=null;
 async function getDocs(){
-  if(docsCache) return docsCache;
-  const [ct,mrt] = await Promise.all([
+  if(docsCache)return docsCache;
+  const [ct,mrt]=await Promise.all([
     fetch("assets/schaefer_ct.txt").then(r=>r.ok?r.text():""),
     fetch("assets/schaefer_mrt.txt").then(r=>r.ok?r.text():"")
   ]);
-  docsCache = "\n\n\n" + ct + "\n\n\n" + mrt;
-  return docsCache;
+  docsCache="\n\n\n"+ct+"\n\n\n"+mrt; return docsCache;
 }
-async function copyPrompt(p, values={}, cardEl=null, ev=null){
+async function copyPrompt(p,values={},cardEl=null,ev=null){
   try{
-    let text = fillPlaceholders(p.text, values);
-    if(p.docs) text += await getDocs();
+    let text=fillPlaceholders(p.text,values);
+    if(p.docs) text+=await getDocs();
     await navigator.clipboard.writeText(text);
-    toast(p.docs ? "Prompt + Schäfer-Dokumente kopiert" : "Prompt kopiert");
+    toast(p.docs?"Prompt + Schäfer-Dokumente kopiert":"Prompt kopiert");
     if(cardEl){
       cardEl.classList.add("copied");
-      setTimeout(()=>cardEl.classList.remove("copied"), 700);
+      setTimeout(()=>cardEl.classList.remove("copied"),700);
       if(ev){
-        const r = document.createElement("span");
-        r.className = "ripple";
-        const rect = cardEl.getBoundingClientRect();
-        r.style.left = (ev.clientX-rect.left-30)+"px";
-        r.style.top = (ev.clientY-rect.top-30)+"px";
-        cardEl.appendChild(r);
-        setTimeout(()=>r.remove(), 650);
+        const r=document.createElement("span");r.className="ripple";
+        const rc=cardEl.getBoundingClientRect();
+        r.style.left=(ev.clientX-rc.left-30)+"px";r.style.top=(ev.clientY-rc.top-30)+"px";
+        cardEl.appendChild(r);setTimeout(()=>r.remove(),650);
       }
     }
-  }catch(e){
-    toast("Kopieren fehlgeschlagen – Seite fokussieren", true);
-  }
+  }catch{ toast("Kopieren fehlgeschlagen – Fenster fokussieren",true); }
 }
 
-/* ============ Toast ============ */
-function toast(msg, isErr=false){
-  const t = document.createElement("div");
-  t.className = "toast";
-  t.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${isErr?'<path d="M12 8v5m0 3v.5"/><circle cx="12" cy="12" r="9"/>':'<path d="M4 12l5 5L20 6"/>'}</svg><span></span>`;
-  t.querySelector("span").textContent = msg;
-  document.getElementById("toasts").appendChild(t);
-  setTimeout(()=>{ t.classList.add("out"); setTimeout(()=>t.remove(), 320); }, 2100);
+function toast(msg,err=false){
+  const t=document.createElement("div");t.className="toast";
+  t.innerHTML=`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${err?'<path d="M12 8v5m0 3v.5"/><circle cx="12" cy="12" r="9"/>':'<path d="M4 12l5 5L20 6"/>'}</svg><span></span>`;
+  t.querySelector("span").textContent=msg;
+  $("toasts").appendChild(t);
+  setTimeout(()=>{t.classList.add("out");setTimeout(()=>t.remove(),320);},2100);
 }
 
-/* ============ Rendering ============ */
-function foldersSorted(){ return state.folders; }
-function promptsIn(fid){
-  return state.prompts.filter(p=>p.folderId===fid).sort((a,b)=>a.order-b.order);
+const promptsIn=fid=>state.prompts.filter(p=>p.folderId===fid).sort((a,b)=>a.order-b.order);
+function visiblePrompts(){
+  let list = filterFav ? state.prompts.filter(p=>p.fav) : promptsIn(state.activeFolder);
+  if(query){const q=query.toLowerCase();list=list.filter(p=>p.name.toLowerCase().includes(q)||p.text.toLowerCase().includes(q));}
+  return list.slice().sort((a,b)=>a.order-b.order);
 }
 
-function render(){
-  renderTabs();
-  renderFavs();
-  renderGrid();
-}
+function render(){renderPills();renderGrid();}
 
-function renderTabs(){
-  els.tabs.innerHTML = "";
-  for(const f of foldersSorted()){
-    const b = document.createElement("button");
-    b.className = "tab" + (f.id===state.activeFolder?" active":"");
-    b.innerHTML = `<span></span><span class="count"></span>`;
-    b.firstChild.textContent = f.name;
-    b.lastChild.textContent = promptsIn(f.id).length;
-    b.onclick = ()=>{ state.activeFolder = f.id; save(); render(); };
-    b.oncontextmenu = (e)=>{ e.preventDefault(); folderMenu(f, e); };
-    // drop target for prompts + folder reorder
-    b.draggable = true;
-    b.ondragstart = e=>{ e.dataTransfer.setData("folder", f.id); };
-    b.ondragover = e=>{ e.preventDefault(); b.classList.add("dragover"); };
-    b.ondragleave = ()=> b.classList.remove("dragover");
-    b.ondrop = e=>{
-      e.preventDefault(); b.classList.remove("dragover");
-      const pid = e.dataTransfer.getData("prompt");
-      const fid = e.dataTransfer.getData("folder");
-      if(pid){
-        const p = state.prompts.find(x=>x.id===pid);
-        if(p && p.folderId!==f.id){
-          p.folderId = f.id;
-          p.order = promptsIn(f.id).length;
-          save(); render();
-          toast(`Verschoben nach „${f.name}“`);
-        }
-      } else if(fid && fid!==f.id){
-        const from = state.folders.findIndex(x=>x.id===fid);
-        const to = state.folders.findIndex(x=>x.id===f.id);
-        const [mv] = state.folders.splice(from,1);
-        state.folders.splice(to,0,mv);
-        save(); render();
-      }
+function renderPills(){
+  els.pills.innerHTML="";
+  const favBtn=document.createElement("button");
+  favBtn.className="pill fav"+(filterFav?" active":"");
+  favBtn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17l-6.1 3.6 1.4-6.8L2.2 9.1l6.9-.8z"/></svg><span class="count"></span>`;
+  favBtn.lastChild.textContent=state.prompts.filter(p=>p.fav).length;
+  favBtn.title="Favoriten";
+  favBtn.onclick=()=>{filterFav=!filterFav;render();};
+  els.pills.appendChild(favBtn);
+
+  for(const f of state.folders){
+    const b=document.createElement("button");
+    b.className="pill"+(!filterFav&&f.id===state.activeFolder?" active":"");
+    b.innerHTML=`<span></span><span class="count"></span>`;
+    b.firstChild.textContent=f.name;
+    b.lastChild.textContent=promptsIn(f.id).length;
+    b.onclick=()=>{filterFav=false;state.activeFolder=f.id;save();render();};
+    b.oncontextmenu=e=>{e.preventDefault();folderMenu(f,e);};
+    b.draggable=true;
+    b.ondragstart=e=>e.dataTransfer.setData("folder",f.id);
+    b.ondragover=e=>{e.preventDefault();b.classList.add("dragover");};
+    b.ondragleave=()=>b.classList.remove("dragover");
+    b.ondrop=e=>{
+      e.preventDefault();b.classList.remove("dragover");
+      const pid=e.dataTransfer.getData("prompt"),fid=e.dataTransfer.getData("folder");
+      if(pid){const p=state.prompts.find(x=>x.id===pid);if(p&&p.folderId!==f.id){p.folderId=f.id;p.order=promptsIn(f.id).length;save();render();toast(`Verschoben nach „${f.name}"`);}}
+      else if(fid&&fid!==f.id){const from=state.folders.findIndex(x=>x.id===fid),to=state.folders.findIndex(x=>x.id===f.id);const[mv]=state.folders.splice(from,1);state.folders.splice(to,0,mv);save();render();}
     };
-    els.tabs.appendChild(b);
+    els.pills.appendChild(b);
   }
+  const add=document.createElement("button");
+  add.className="pill addf";add.title="Neuer Ordner";
+  add.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+  add.onclick=()=>{const n=prompt("Name des neuen Ordners:");if(n&&n.trim()){const f={id:uid(),name:n.trim()};state.folders.push(f);filterFav=false;state.activeFolder=f.id;save();render();}};
+  els.pills.appendChild(add);
 }
 
-function folderMenu(f, e){
+function folderMenu(f,e){
   closeMenus();
-  const m = document.createElement("div");
-  m.className = "mini-menu";
-  m.style.left = Math.min(e.clientX, innerWidth-200)+"px";
-  m.style.top = (e.clientY+6)+"px";
-  m.innerHTML = `
-    <button data-a="rename">✎ Umbenennen</button>
-    <hr>
-    <button data-a="del" class="danger">🗑 Ordner löschen</button>`;
-  m.onclick = ev=>{
-    const a = ev.target.dataset.a;
-    if(a==="rename"){
-      const n = prompt("Neuer Ordnername:", f.name);
-      if(n && n.trim()){ f.name = n.trim(); save(); render(); }
-    }
+  const m=document.createElement("div");m.className="mini-menu";
+  m.style.left=Math.min(e.clientX,innerWidth-210)+"px";m.style.top=(e.clientY+6)+"px";
+  m.innerHTML=`<button data-a="rename">✎ Umbenennen</button><hr><button data-a="del" class="danger">🗑 Ordner löschen</button>`;
+  m.onclick=ev=>{
+    const a=ev.target.dataset.a;
+    if(a==="rename"){const n=prompt("Neuer Ordnername:",f.name);if(n&&n.trim()){f.name=n.trim();save();render();}}
     if(a==="del"){
-      if(state.folders.length<=1){ toast("Letzter Ordner kann nicht gelöscht werden", true); }
+      if(state.folders.length<=1)toast("Letzter Ordner kann nicht gelöscht werden",true);
       else if(confirm(`Ordner „${f.name}" und ${promptsIn(f.id).length} Prompt(s) löschen?`)){
-        state.prompts = state.prompts.filter(p=>p.folderId!==f.id);
-        state.folders = state.folders.filter(x=>x.id!==f.id);
-        if(state.activeFolder===f.id) state.activeFolder = state.folders[0].id;
-        save(); render();
+        state.prompts=state.prompts.filter(p=>p.folderId!==f.id);
+        state.folders=state.folders.filter(x=>x.id!==f.id);
+        if(state.activeFolder===f.id)state.activeFolder=state.folders[0].id;
+        save();render();
       }
     }
     closeMenus();
   };
   document.body.appendChild(m);
 }
-function closeMenus(){ document.querySelectorAll(".mini-menu").forEach(x=>x.remove()); }
-document.addEventListener("click", e=>{ if(!e.target.closest(".mini-menu")) closeMenus(); });
-
-function renderFavs(){
-  els.favChips.innerHTML = "";
-  const favs = state.prompts.filter(p=>p.fav);
-  if(!favs.length){
-    els.favChips.innerHTML = `<span class="fav-empty">Noch keine Favoriten – im Editor mit ★ markieren.</span>`;
-    return;
-  }
-  for(const p of favs){
-    const c = document.createElement("button");
-    c.className = "chip";
-    c.innerHTML = `<span class="cdot"></span><span></span>`;
-    c.lastChild.textContent = p.name;
-    c.title = "Klick: kopieren · Rechtsklick: öffnen";
-    c.onclick = ()=>{
-      const phs = placeholdersOf(p.text);
-      if(phs.length){
-        state.activeFolder = p.folderId; render();
-        toast("Platzhalter im Board ausfüllen");
-        setTimeout(()=>{
-          const el = document.querySelector(`[data-pid="${p.id}"] input, [data-pid="${p.id}"] select`);
-          el && el.focus();
-        }, 60);
-      } else copyPrompt(p);
-    };
-    c.oncontextmenu = e=>{ e.preventDefault(); openEditor(p.id); };
-    els.favChips.appendChild(c);
-  }
-}
+function closeMenus(){document.querySelectorAll(".mini-menu").forEach(x=>x.remove());}
+document.addEventListener("click",e=>{if(!e.target.closest(".mini-menu")&&!e.target.closest("#btnMenu"))closeMenus();});
 
 function renderGrid(){
-  els.grid.innerHTML = "";
-  const list = promptsIn(state.activeFolder);
-  list.forEach((p,i)=>{
-    els.grid.appendChild(makeCard(p, i));
-  });
-  // add tile
-  const add = document.createElement("button");
-  add.className = "card add";
-  add.style.setProperty("--i", list.length);
-  add.innerHTML = `<span class="plus">+</span><span>Neues Template</span>`;
-  add.onclick = ()=> openEditor(null);
-  els.grid.appendChild(add);
-  if(!list.length){
-    const e = document.createElement("div");
-    e.className = "empty-state";
-    e.textContent = "Dieser Ordner ist leer. Templates hierher ziehen oder neu anlegen.";
-    els.grid.prepend(e);
+  els.grid.innerHTML="";
+  const list=visiblePrompts();
+  if(!list.length&&query){els.grid.innerHTML=`<div class="no-hits">Keine Treffer für „${query}".</div>`;return;}
+  if(filterFav&&!list.length){els.grid.innerHTML=`<div class="empty">Noch keine Favoriten – im Editor mit ★ markieren.</div>`;return;}
+  list.forEach((p,i)=>els.grid.appendChild(makeCard(p,i)));
+  if(!filterFav&&!query){
+    const add=document.createElement("button");
+    add.className="card add";add.style.setProperty("--i",list.length);
+    add.innerHTML=`<span class="plus">+</span><span>Neues Template</span>`;
+    add.onclick=()=>openEditor(null);
+    els.grid.appendChild(add);
+    if(!list.length){const e=document.createElement("div");e.className="empty";e.textContent="Dieser Ordner ist leer. Templates hierher ziehen oder neu anlegen.";els.grid.prepend(e);}
   }
 }
 
-function makeCard(p, i){
-  const phs = placeholdersOf(p.text);
-  const el = document.createElement("div");
-  el.className = "card" + (phs.length?" has-ph":"");
-  el.style.setProperty("--i", i);
-  el.dataset.pid = p.id;
-  el.draggable = true;
-
-  el.innerHTML = `
-    <div class="name"></div>
+function makeCard(p,i){
+  const phs=placeholdersOf(p.text);
+  const el=document.createElement("div");
+  el.className="card"+(phs.length?" has-ph":"");
+  el.style.setProperty("--i",i);el.dataset.pid=p.id;el.draggable=true;el.tabIndex=0;
+  el.innerHTML=`<div class="name"></div>
     ${p.fav?'<span class="fav-ind"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17l-6.1 3.6 1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>':''}
-    <button class="icon-btn expand" title="Erweitern / Bearbeiten">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H3v-6M15 3h6v6M21 3l-7 7M3 21l7-7"/></svg>
-    </button>`;
-  el.querySelector(".name").textContent = p.name;
+    <button class="expand" title="Erweitern / Bearbeiten"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H3v-6M15 3h6v6M21 3l-7 7M3 21l7-7"/></svg></button>`;
+  el.querySelector(".name").textContent=p.name;
 
   if(phs.length){
-    const wrap = document.createElement("div");
-    wrap.className = "ph-fields";
+    const wrap=document.createElement("div");wrap.className="ph-fields";
     for(const name of phs){
       if(name.toLowerCase()==="modalität"){
-        const s = document.createElement("select");
-        s.dataset.ph = name;
-        s.innerHTML = MODALITIES.map(m=>`<option>${m}</option>`).join("");
-        wrap.appendChild(s);
+        const s=document.createElement("select");s.dataset.ph=name;
+        s.innerHTML=MODALITIES.map(m=>`<option>${m}</option>`).join("");wrap.appendChild(s);
       }else{
-        const inp = document.createElement("input");
-        inp.dataset.ph = name;
-        inp.placeholder = name;
-        inp.autocomplete = "off";
-        wrap.appendChild(inp);
+        const inp=document.createElement("input");inp.dataset.ph=name;inp.placeholder=name;inp.autocomplete="off";wrap.appendChild(inp);
       }
     }
     el.appendChild(wrap);
-    const cta = document.createElement("button");
-    cta.className = "copy-cta";
-    cta.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg> Ausfüllen & Kopieren`;
-    cta.onclick = ev=>{
-      ev.stopPropagation();
-      const values = {};
-      wrap.querySelectorAll("[data-ph]").forEach(f=> values[f.dataset.ph] = f.value);
-      copyPrompt(p, values, el, ev);
-    };
+    const cta=document.createElement("button");cta.className="copy-cta";
+    cta.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg> Ausfüllen & Kopieren`;
+    cta.onclick=ev=>{ev.stopPropagation();const v={};wrap.querySelectorAll("[data-ph]").forEach(f=>v[f.dataset.ph]=f.value);copyPrompt(p,v,el,ev);};
     el.appendChild(cta);
   }
 
-  const meta = document.createElement("div");
-  meta.className = "meta";
-  meta.innerHTML =
-    (p.docs?'<span class="badge docs">+DOCS</span>':'') +
-    (phs.length?`<span class="badge">${phs.length} FELD${phs.length>1?"ER":""}</span>`:'') +
+  const meta=document.createElement("div");meta.className="meta";
+  meta.innerHTML=(p.docs?'<span class="badge docs">+DOCS</span>':'')+
+    (phs.length?`<span class="badge ph">${phs.length} FELD${phs.length>1?"ER":""}</span>`:'')+
     `<span>${(p.text.length/1000).toFixed(1)}k</span>`;
   el.appendChild(meta);
 
-  // click = copy (nur bei Karten ohne Platzhalter)
-  el.onclick = ev=>{
-    if(ev.target.closest(".expand, input, select, .copy-cta")) return;
-    if(!phs.length) copyPrompt(p, {}, el, ev);
-  };
-  el.querySelector(".expand").onclick = ev=>{ ev.stopPropagation(); openEditor(p.id); };
+  el.onclick=ev=>{if(ev.target.closest(".expand, input, select, .copy-cta"))return;if(!phs.length)copyPrompt(p,{},el,ev);};
+  el.onkeydown=ev=>{if((ev.key==="Enter"||ev.key===" ")&&!ev.target.closest("input,select,.copy-cta,.expand")&&!phs.length){ev.preventDefault();copyPrompt(p,{},el);}};
+  el.querySelector(".expand").onclick=ev=>{ev.stopPropagation();openEditor(p.id);};
+  el.onmousemove=ev=>{const r=el.getBoundingClientRect();el.style.setProperty("--mx",(ev.clientX-r.left)+"px");el.style.setProperty("--my",(ev.clientY-r.top)+"px");};
 
-  // hover glow follows cursor
-  el.onmousemove = ev=>{
-    const r = el.getBoundingClientRect();
-    el.style.setProperty("--mx", (ev.clientX-r.left)+"px");
-    el.style.setProperty("--my", (ev.clientY-r.top)+"px");
-  };
-
-  // drag & drop reorder
-  el.ondragstart = ev=>{
-    ev.dataTransfer.setData("prompt", p.id);
-    ev.dataTransfer.effectAllowed = "move";
-    requestAnimationFrame(()=>el.classList.add("dragging"));
-  };
-  el.ondragend = ()=> el.classList.remove("dragging");
-  el.ondragover = ev=>{
-    ev.preventDefault();
-    const r = el.getBoundingClientRect();
-    const left = (ev.clientX - r.left) < r.width/2;
-    el.classList.toggle("dropside-l", left);
-    el.classList.toggle("dropside-r", !left);
-  };
-  el.ondragleave = ()=> el.classList.remove("dropside-l","dropside-r");
-  el.ondrop = ev=>{
-    ev.preventDefault();
-    const left = el.classList.contains("dropside-l");
-    el.classList.remove("dropside-l","dropside-r");
-    const srcId = ev.dataTransfer.getData("prompt");
-    if(!srcId || srcId===p.id) return;
-    const src = state.prompts.find(x=>x.id===srcId);
-    if(!src) return;
-    src.folderId = p.folderId;
-    const list = promptsIn(p.folderId).filter(x=>x.id!==srcId);
-    let idx = list.findIndex(x=>x.id===p.id);
-    if(!left) idx++;
-    list.splice(idx, 0, src);
-    list.forEach((x,n)=> x.order = n);
-    save(); render();
+  el.ondragstart=ev=>{ev.dataTransfer.setData("prompt",p.id);ev.dataTransfer.effectAllowed="move";requestAnimationFrame(()=>el.classList.add("dragging"));};
+  el.ondragend=()=>el.classList.remove("dragging");
+  el.ondragover=ev=>{ev.preventDefault();const r=el.getBoundingClientRect();const left=(ev.clientX-r.left)<r.width/2;el.classList.toggle("dropside-l",left);el.classList.toggle("dropside-r",!left);};
+  el.ondragleave=()=>el.classList.remove("dropside-l","dropside-r");
+  el.ondrop=ev=>{
+    ev.preventDefault();const left=el.classList.contains("dropside-l");el.classList.remove("dropside-l","dropside-r");
+    const srcId=ev.dataTransfer.getData("prompt");if(!srcId||srcId===p.id)return;
+    const src=state.prompts.find(x=>x.id===srcId);if(!src)return;
+    src.folderId=p.folderId;
+    const l=promptsIn(p.folderId).filter(x=>x.id!==srcId);
+    let idx=l.findIndex(x=>x.id===p.id);if(!left)idx++;
+    l.splice(idx,0,src);l.forEach((x,n)=>x.order=n);
+    save();render();
   };
   return el;
 }
 
-/* ============ Editor ============ */
-let editId = null;
-const m = {
-  title: document.getElementById("mTitle"),
-  text: document.getElementById("mText"),
-  folder: document.getElementById("mFolder"),
-  docs: document.getElementById("mDocs"),
-  fav: document.getElementById("mFav"),
-  ph: document.getElementById("mPh"),
-};
-let mFavVal = false;
-
+let editId=null,mFavVal=false;
+const m={title:$("mTitle"),text:$("mText"),folder:$("mFolder"),docs:$("mDocs"),fav:$("mFav"),ph:$("mPh")};
 function openEditor(id){
-  editId = id;
-  const p = id ? state.prompts.find(x=>x.id===id) : null;
-  m.title.value = p?.name || "";
-  m.text.value = p?.text || "";
-  m.docs.checked = !!p?.docs;
-  mFavVal = !!p?.fav;
-  m.folder.innerHTML = state.folders.map(f=>`<option value="${f.id}"${f.id===(p?.folderId||state.activeFolder)?" selected":""}></option>`).join("");
-  state.folders.forEach((f,i)=> m.folder.options[i].textContent = f.name);
-  document.getElementById("mDelete").style.visibility = p ? "visible" : "hidden";
-  updFav(); updPh();
-  els.overlay.classList.add("open");
-  setTimeout(()=> (p?m.text:m.title).focus(), 120);
+  editId=id;const p=id?state.prompts.find(x=>x.id===id):null;
+  m.title.value=p?.name||"";m.text.value=p?.text||"";m.docs.checked=!!p?.docs;mFavVal=!!p?.fav;
+  const target=p?.folderId||(filterFav?state.folders[0].id:state.activeFolder);
+  m.folder.innerHTML=state.folders.map(f=>`<option value="${f.id}"${f.id===target?" selected":""}></option>`).join("");
+  state.folders.forEach((f,i)=>m.folder.options[i].textContent=f.name);
+  $("mDelete").style.visibility=p?"visible":"hidden";
+  updFav();updPh();els.overlay.classList.add("open");
+  setTimeout(()=>(p?m.text:m.title).focus(),120);
 }
-function closeEditor(){ els.overlay.classList.remove("open"); editId = null; }
-function updFav(){
-  m.fav.style.color = mFavVal ? "var(--gold)" : "";
-  m.fav.querySelector("path").setAttribute("fill", mFavVal ? "currentColor" : "none");
+function closeEditor(){els.overlay.classList.remove("open");editId=null;}
+function updFav(){m.fav.classList.toggle("on",mFavVal);m.fav.style.color=mFavVal?"var(--gold)":"";m.fav.querySelector("path").setAttribute("fill",mFavVal?"currentColor":"none");}
+function updPh(){const phs=placeholdersOf(m.text.value);m.ph.innerHTML=phs.length?"Platzhalter: "+phs.map(x=>`<b>***${x}***</b>`).join(" · "):"Keine Platzhalter. ***NAME*** erzeugt ein Feld — ***Modalität*** ein Dropdown (CT/MRT/Röntgen/CT&MRT).";}
+m.text.addEventListener("input",updPh);
+m.fav.onclick=()=>{mFavVal=!mFavVal;updFav();};
+$("mClose").onclick=closeEditor;
+els.overlay.addEventListener("click",e=>{if(e.target===els.overlay)closeEditor();});
+$("mSave").onclick=()=>{
+  const name=m.title.value.trim()||"Unbenannt";
+  if(editId){const p=state.prompts.find(x=>x.id===editId);const oldF=p.folderId;Object.assign(p,{name,text:m.text.value,docs:m.docs.checked,fav:mFavVal});if(oldF!==m.folder.value){p.folderId=m.folder.value;p.order=promptsIn(p.folderId).length;}}
+  else state.prompts.push({id:uid(),name,text:m.text.value,folderId:m.folder.value,fav:mFavVal,docs:m.docs.checked,order:promptsIn(m.folder.value).length});
+  save();render();closeEditor();toast("Gespeichert");
+};
+$("mDelete").onclick=()=>{if(editId&&confirm("Template wirklich löschen?")){state.prompts=state.prompts.filter(x=>x.id!==editId);save();render();closeEditor();toast("Gelöscht");}};
+$("mCopy").onclick=()=>{const t={text:m.text.value,docs:m.docs.checked};if(placeholdersOf(t.text).length){toast("Enthält Platzhalter – über die Karte kopieren",true);return;}copyPrompt(t);};
+
+$("search").addEventListener("input",e=>{query=e.target.value.trim();renderGrid();});
+
+const cmdk=$("cmdk"),cmdkInput=$("cmdkInput"),cmdkList=$("cmdkList");
+let cmdkSel=0,cmdkResults=[];
+function openCmdk(){cmdk.classList.add("open");cmdkInput.value="";cmdkFilter("");setTimeout(()=>cmdkInput.focus(),80);}
+function closeCmdk(){cmdk.classList.remove("open");}
+function cmdkFilter(q){
+  q=q.toLowerCase();
+  let list=state.prompts.slice();
+  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.text.toLowerCase().includes(q));
+  list.sort((a,b)=>(b.fav-a.fav)||a.name.localeCompare(b.name));
+  cmdkResults=list.slice(0,40);cmdkSel=0;renderCmdk();
 }
-function updPh(){
-  const phs = placeholdersOf(m.text.value);
-  m.ph.innerHTML = phs.length
-    ? "Platzhalter erkannt: " + phs.map(x=>`<b>***${x}***</b>`).join(" · ")
-    : "Keine Platzhalter. Format: ***NAME*** — ***Modalität*** erzeugt ein Dropdown (CT/MRT/Röntgen/CT&MRT).";
+function renderCmdk(){
+  const fmap=Object.fromEntries(state.folders.map(f=>[f.id,f.name]));
+  cmdkList.innerHTML="";
+  cmdkResults.forEach((p,i)=>{
+    const d=document.createElement("div");d.className="cmdk-item"+(i===cmdkSel?" sel":"");
+    d.innerHTML=`${p.fav?'<span class="cistar"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17l-6.1 3.6 1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>':'<span style="width:12px;flex:none"></span>'}<span class="ci-name"></span><span class="ci-folder"></span>`;
+    d.querySelector(".ci-name").textContent=p.name;
+    d.querySelector(".ci-folder").textContent=fmap[p.folderId]||"";
+    d.onclick=()=>cmdkChoose(p);
+    d.onmouseenter=()=>{cmdkSel=i;renderCmdk();};
+    cmdkList.appendChild(d);
+  });
 }
-m.text.addEventListener("input", updPh);
-m.fav.onclick = ()=>{ mFavVal = !mFavVal; updFav(); };
-document.getElementById("mClose").onclick = closeEditor;
-els.overlay.addEventListener("click", e=>{ if(e.target===els.overlay) closeEditor(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeEditor(); });
+function cmdkChoose(p){
+  const phs=placeholdersOf(p.text);
+  closeCmdk();
+  if(phs.length){filterFav=false;state.activeFolder=p.folderId;query="";$("search").value="";render();toast("Platzhalter im Board ausfüllen");setTimeout(()=>{const el=document.querySelector(`[data-pid="${p.id}"] input, [data-pid="${p.id}"] select`);el&&el.focus();el&&el.scrollIntoView({block:"center",behavior:"smooth"});},80);}
+  else copyPrompt(p);
+}
+cmdkInput.addEventListener("input",e=>cmdkFilter(e.target.value));
+cmdkInput.addEventListener("keydown",e=>{
+  if(e.key==="ArrowDown"){e.preventDefault();cmdkSel=Math.min(cmdkSel+1,cmdkResults.length-1);renderCmdk();cmdkList.children[cmdkSel]?.scrollIntoView({block:"nearest"});}
+  else if(e.key==="ArrowUp"){e.preventDefault();cmdkSel=Math.max(cmdkSel-1,0);renderCmdk();cmdkList.children[cmdkSel]?.scrollIntoView({block:"nearest"});}
+  else if(e.key==="Enter"){e.preventDefault();cmdkResults[cmdkSel]&&cmdkChoose(cmdkResults[cmdkSel]);}
+});
+cmdk.addEventListener("click",e=>{if(e.target===cmdk)closeCmdk();});
 
-document.getElementById("mSave").onclick = ()=>{
-  const name = m.title.value.trim() || "Unbenannt";
-  if(editId){
-    const p = state.prompts.find(x=>x.id===editId);
-    Object.assign(p, {name, text:m.text.value, docs:m.docs.checked, fav:mFavVal});
-    if(p.folderId !== m.folder.value){
-      p.folderId = m.folder.value;
-      p.order = promptsIn(p.folderId).length;
-    }
-  }else{
-    state.prompts.push({id:uid(), name, text:m.text.value, folderId:m.folder.value,
-      fav:mFavVal, docs:m.docs.checked, order: promptsIn(m.folder.value).length});
-  }
-  save(); render(); closeEditor(); toast("Gespeichert");
-};
-document.getElementById("mDelete").onclick = ()=>{
-  if(editId && confirm("Template wirklich löschen?")){
-    state.prompts = state.prompts.filter(x=>x.id!==editId);
-    save(); render(); closeEditor(); toast("Gelöscht");
-  }
-};
-document.getElementById("mCopy").onclick = ()=>{
-  const tmp = {text:m.text.value, docs:m.docs.checked};
-  const phs = placeholdersOf(tmp.text);
-  if(phs.length){ toast("Enthält Platzhalter – über die Karte kopieren", true); return; }
-  copyPrompt(tmp);
-};
+function applyDensity(){document.body.classList.toggle("compact",state.compact);$("btnDensity").classList.toggle("on",state.compact);}
+$("btnDensity").onclick=()=>{state.compact=!state.compact;applyDensity();save();};
 
-/* ============ Ordner / Import / Export ============ */
-document.getElementById("btnAddFolder").onclick = ()=>{
-  const n = prompt("Name des neuen Ordners:");
-  if(n && n.trim()){
-    const f = {id:uid(), name:n.trim()};
-    state.folders.push(f);
-    state.activeFolder = f.id;
-    save(); render();
-  }
+$("btnMenu").onclick=e=>{
+  e.stopPropagation();closeMenus();
+  const r=e.currentTarget.getBoundingClientRect();
+  const m2=document.createElement("div");m2.className="mini-menu";
+  m2.style.top=(r.bottom+6)+"px";m2.style.left=Math.min(r.left-150,innerWidth-210)+"px";
+  m2.innerHTML=`<button data-a="cmd">⌕ Schnellsuche (Strg K)</button><button data-a="new">＋ Neues Template</button><button data-a="folder">＋ Neuer Ordner</button><hr><button data-a="export">⭳ Backup exportieren</button><button data-a="import">⭱ Backup importieren</button>`;
+  m2.onclick=ev=>{
+    const a=ev.target.dataset.a;
+    if(a==="cmd")openCmdk();
+    if(a==="new")openEditor(null);
+    if(a==="folder"){const n=prompt("Name des neuen Ordners:");if(n&&n.trim()){const f={id:uid(),name:n.trim()};state.folders.push(f);filterFav=false;state.activeFolder=f.id;save();render();}}
+    if(a==="export"){const a2=document.createElement("a");a2.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));a2.download="radprompt-backup.json";a2.click();URL.revokeObjectURL(a2.href);toast("Backup exportiert");}
+    if(a==="import")$("importFile").click();
+    closeMenus();
+  };
+  document.body.appendChild(m2);
 };
-document.getElementById("btnExport").onclick = ()=>{
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}));
-  a.download = "radprompt-backup.json";
-  a.click(); URL.revokeObjectURL(a.href);
-  toast("Backup exportiert");
-};
-document.getElementById("btnImport").onclick = ()=> document.getElementById("importFile").click();
-document.getElementById("importFile").onchange = async e=>{
-  const f = e.target.files[0]; if(!f) return;
-  try{
-    const data = JSON.parse(await f.text());
-    if(!data.folders || !data.prompts) throw 0;
-    state = data; save(); render(); toast("Backup importiert");
-  }catch{ toast("Ungültige Datei", true); }
-  e.target.value = "";
+$("importFile").onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const data=JSON.parse(await f.text());if(!data.folders||!data.prompts)throw 0;state=data;migrate();applyDensity();save();render();toast("Backup importiert");}
+  catch{toast("Ungültige Datei",true);}
+  e.target.value="";
 };
 
-/* ============ Init ============ */
-(async ()=>{
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();cmdk.classList.contains("open")?closeCmdk():openCmdk();return;}
+  if(e.key==="Escape"){closeCmdk();closeEditor();closeMenus();}
+});
+
+(async()=>{
   await loadState();
-  if(!state.folders.find(f=>f.id===state.activeFolder)) state.activeFolder = state.folders[0]?.id;
-  render();
+  if(!state.folders.find(f=>f.id===state.activeFolder))state.activeFolder=state.folders[0]?.id;
+  applyDensity();render();
 })();
 </script>
 </body>
