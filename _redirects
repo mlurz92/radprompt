@@ -1,0 +1,15 @@
+/home / 302
+/app / 302
+/board / 302
+/dashboard / 302
+/prompts / 302
+/radprompt / 302
+/start / 302
+/new /?action=new-prompt 302
+/new-prompt /?action=new-prompt 302
+/import /?action=import 302
+/seed /?action=import 302
+/export /?action=export 302
+/diagnostics /?action=diagnostics 302
+/health /api/health 302
+/api /api/health 302

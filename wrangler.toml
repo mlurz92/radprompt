@@ -1,0 +1,52 @@
+"$schema" = "./node_modules/wrangler/config-schema.json"
+name = "radprompt"
+compatibility_date = "2026-07-09"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "RADPROMPT_KV"
+id = "9e6bc961684e4b928ef276bd2ff1adb2"
+
+[vars]
+RADPROMPT_APP_NAME = "RadPrompt"
+RADPROMPT_SCHEMA = "radprompt.v1"
+RADPROMPT_STATE_KEY = "radprompt:state:v1"
+RADPROMPT_HOSTNAME = "radprompt.pages.dev"
+RADPROMPT_COMPATIBILITY = "2026-07-09"
+RADPROMPT_ENVIRONMENT = "default"
+RADPROMPT_KV_STRATEGY = "shared-preview-production"
+RADPROMPT_KV_NAMESPACE_ID = "9e6bc961684e4b928ef276bd2ff1adb2"
+
+[env.production]
+name = "radprompt-production"
+
+[[env.production.kv_namespaces]]
+binding = "RADPROMPT_KV"
+id = "9e6bc961684e4b928ef276bd2ff1adb2"
+
+[env.production.vars]
+RADPROMPT_APP_NAME = "RadPrompt"
+RADPROMPT_SCHEMA = "radprompt.v1"
+RADPROMPT_STATE_KEY = "radprompt:state:v1"
+RADPROMPT_HOSTNAME = "radprompt.pages.dev"
+RADPROMPT_COMPATIBILITY = "2026-07-09"
+RADPROMPT_ENVIRONMENT = "production"
+RADPROMPT_KV_STRATEGY = "shared-preview-production"
+RADPROMPT_KV_NAMESPACE_ID = "9e6bc961684e4b928ef276bd2ff1adb2"
+
+[env.preview]
+name = "radprompt-preview"
+
+[[env.preview.kv_namespaces]]
+binding = "RADPROMPT_KV"
+id = "9e6bc961684e4b928ef276bd2ff1adb2"
+
+[env.preview.vars]
+RADPROMPT_APP_NAME = "RadPrompt"
+RADPROMPT_SCHEMA = "radprompt.v1"
+RADPROMPT_STATE_KEY = "radprompt:state:v1"
+RADPROMPT_HOSTNAME = "radprompt.pages.dev"
+RADPROMPT_COMPATIBILITY = "2026-07-09"
+RADPROMPT_ENVIRONMENT = "preview"
+RADPROMPT_KV_STRATEGY = "shared-preview-production"
+RADPROMPT_KV_NAMESPACE_ID = "9e6bc961684e4b928ef276bd2ff1adb2"

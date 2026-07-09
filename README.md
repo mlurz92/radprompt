@@ -1,89 +1,161 @@
 # RadPrompt
 
-Kompakte, moderne Prompt-Board-Anwendung für Cloudflare Pages unter `radprompt.pages.dev`.
+RadPrompt ist eine build-freie Cloudflare-Pages-Anwendung für Windows-11-orientiertes Arbeiten mit radiologischen KI-Prompt-Templates.
 
-## Enthalten
+Die Anwendung stellt ein kompaktes, dunkles Schnellzugriffsboard bereit, das neben Browser, RIS, PACS oder Befundungsumgebung positioniert werden kann. Prompt-Templates werden per Klick in die Zwischenablage kopiert, in Ordner sortiert, als Favoriten markiert und über Cloudflare Workers KV synchronisiert.
 
-- Reine No-Build-Webanwendung: `index.html`, `styles.css`, `app.js`
-- Cloudflare Pages Functions:
-  - `GET /api/state`
-  - `PUT /api/state`
-  - `GET /api/health`
-- Persistenz über Workers KV Binding `RADPROMPT_KV`
-- Seed-Daten aus `Beispielprompts.txt`
-- Prof.-Schäfer-Textdokumente als statische Assets unter `/data/`
-- Favoriten-Bar, Ordner, Drag&Drop-Sortierung, Platzhalterfelder, Modalitäts-Dropdown, Import/Export, Health-Panel
-- Fallback auf `localStorage`, falls KV noch nicht gebunden ist
-
-## Repository-Struktur
+## Produktivziel
 
 ```text
-radprompt-app/
-├─ index.html
-├─ styles.css
-├─ app.js
-├─ manifest.webmanifest
-├─ service-worker.js
-├─ _headers
-├─ _redirects
-├─ wrangler.toml
-├─ assets/
-│  └─ favicon.svg
-├─ data/
-│  ├─ seed.json
-│  ├─ prof-schaefer-ct.txt
-│  └─ prof-schaefer-mrt.txt
-└─ functions/
-   └─ api/
-      ├─ state.js
-      └─ health.js
+https://radprompt.pages.dev
 ```
 
-## Deployment über GitHub + Cloudflare Dashboard
+## Kernfunktionen
 
-1. GitHub-Repository anlegen, z. B. `radprompt`.
-2. Den kompletten Inhalt dieses Ordners in das Repository hochladen.
-3. Cloudflare Dashboard öffnen → **Workers & Pages** → **Create application** → **Pages** → GitHub verbinden.
-4. Repository auswählen.
-5. Build-Konfiguration:
-   - Framework preset: **None**
-   - Build command: leer lassen
-   - Build output directory: `/` oder leer/root, je nach Cloudflare-Maske
-6. Deploy ausführen.
-7. KV Namespace anlegen:
-   - **Workers & Pages** → **KV** → Namespace erstellen: `RADPROMPT_KV`
-8. KV Binding am Pages-Projekt setzen:
-   - Pages-Projekt → **Settings** → **Bindings** → **Add** → **KV namespace**
-   - Variable name: `RADPROMPT_KV`
-   - Namespace: `RADPROMPT_KV`
-9. Projekt erneut deployen, damit das Binding aktiv wird.
-10. `https://radprompt.pages.dev/api/health` öffnen.
-    - Erwartet: `ok: true`, `kv: true`, `probes.binding/read/write: true`.
-11. App öffnen, auf **Seed neu laden** oder **Speichern** klicken, damit der initiale State in KV geschrieben wird.
+- Cloudflare Pages ohne Build-Schritt
+- Pages Functions unter `functions/`
+- KV-Binding `RADPROMPT_KV`
+- KV-Namespace-ID `9e6bc961684e4b928ef276bd2ff1adb2`
+- 4-spaltiges Prompt-Grid
+- Ordnerverwaltung
+- Drag-and-Drop-Sortierung
+- Favoriten-Bar
+- Prompt-Editor
+- Platzhalter im Format `***PLATZHALTER***`
+- Dropdown für `***Modalität***` mit `CT`, `MRT`, `Röntgen`, `CT&MRT`
+- Prof.-Schäfer-Anhangslogik für CT und MRT
+- Seed-Import aus statischen TXT-Dateien
+- JSON-/TXT-Export
+- KV-/Runtime-Diagnostik
+- lokaler `localStorage`-Fallback
+- PWA-Manifest mit SVG-Icons
+- CSP-kompatibler Clipboard-Fallback
 
-## Lokale Prüfung optional
+## Projektstruktur
+
+```text
+radprompt/
+├── index.html
+├── styles.css
+├── app.js
+├── manifest.webmanifest
+├── _headers
+├── _redirects
+├── wrangler.toml
+├── README.md
+├── icons/
+│   ├── radprompt-icon.svg
+│   └── radprompt-maskable.svg
+├── data/
+│   ├── Beispielprompts.txt
+│   ├── Befundbeispiele Prof. Schäfer CT.txt
+│   └── Befundbeispiele Prof. Schäfer MRT.txt
+└── functions/
+    ├── _middleware.js
+    └── api/
+        ├── health.js
+        ├── state.js
+        ├── seed.js
+        └── export.js
+```
+
+## Cloudflare Pages Setup
+
+| Einstellung | Wert |
+|---|---|
+| Framework preset | `None` |
+| Build command | leer |
+| Build output directory | `.` |
+| Functions directory | `functions/` |
+| KV binding | `RADPROMPT_KV` |
+
+## KV-Binding
+
+Im Cloudflare Dashboard unter `Workers & Pages` → Pages-Projekt → `Settings` → `Bindings` einen KV Namespace mit folgendem Binding-Namen setzen:
+
+```text
+RADPROMPT_KV
+```
+
+Namespace-ID:
+
+```text
+9e6bc961684e4b928ef276bd2ff1adb2
+```
+
+## Lokaler Test
 
 ```bash
-npx wrangler pages dev . --kv=RADPROMPT_KV
+npx wrangler pages dev .
 ```
 
-Dann öffnen:
+## Deployment
 
-```text
-http://127.0.0.1:8788
-http://127.0.0.1:8788/api/health
+```bash
+npx wrangler pages deploy . --project-name=radprompt
 ```
 
-## Bedienung
+## Endpunkte
 
-- Prompt kopieren: Platzhalter ausfüllen → **Kopieren**.
-- `***Modalität***` wird automatisch als Dropdown mit `CT`, `MRT`, `Röntgen`, `CT&MRT` gerendert.
-- Prof.-Schäfer-Prompts kopieren zusätzlich `prof-schaefer-ct.txt` und `prof-schaefer-mrt.txt` in die Zwischenablage.
-- Prompt bearbeiten/verschieben: **Erweitern** → Ordner ändern → **Übernehmen**.
-- Drag&Drop: Promptkarten im aktiven Ordner oder Ordner links ziehen.
-- Favorit: Stern auf der Karte aktivieren; erscheint in der Favoriten-Bar.
-- Backup: **Export** erzeugt JSON; **Import** spielt JSON zurück.
+| Endpoint | Methoden | Zweck |
+|---|---|---|
+| `/api/health` | `GET`, `HEAD` | Runtime- und KV-Diagnostik |
+| `/api/state` | `GET`, `HEAD`, `PUT`, `POST`, `PATCH`, `DELETE` | synchronisierter App-State |
+| `/api/seed` | `GET`, `HEAD`, `POST` | Seed-Vorschau und Import |
+| `/api/export` | `GET`, `HEAD` | Export als JSON, State, Manifest oder TXT |
 
-## Hinweis
+## Initialisierung
 
-Die Anwendung enthält bewusst keine Authentifizierung. Bei öffentlicher Domain kann jeder Besucher mit Browserzugriff den KV-State ändern. Das entspricht dem geforderten einfachen Setup ohne zusätzliche Sicherungsmaßnahmen.
+Nach Deployment:
+
+1. `https://radprompt.pages.dev` öffnen
+2. Diagnostik ausführen
+3. Startset laden
+4. Prompts prüfen
+5. Favoriten anpassen
+6. Speichern prüfen
+
+Alternativ:
+
+```bash
+curl -X POST "https://radprompt.pages.dev/api/seed" \
+  -H "Content-Type: application/json" \
+  --data '{"prompts":true,"schaeferCt":true,"schaeferMrt":true,"replace":true,"favoriteFirst":true}'
+```
+
+## Exportbeispiele
+
+```bash
+curl "https://radprompt.pages.dev/api/export?format=json&download=1" -o radprompt-export.json
+curl "https://radprompt.pages.dev/api/export?format=prompts&download=1" -o radprompt-prompts.txt
+curl "https://radprompt.pages.dev/api/export?format=fulltxt&download=1" -o radprompt-volltext.txt
+curl "https://radprompt.pages.dev/api/export?format=schaefer-ct" -o "Befundbeispiele Prof. Schäfer CT.txt"
+```
+
+## Security
+
+Statische Assets erhalten Security Header aus `_headers`. Pages Functions setzen API-Header über `functions/_middleware.js`, da `_headers` nicht auf Function-Antworten angewendet wird.
+
+Enthalten sind unter anderem CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy, no-store für API/Seed-Dateien und immutable Caching für Icons.
+
+## Datenschutz
+
+RadPrompt speichert Prompt-Templates, Ordner, Favoriten, UI-Einstellungen und Prof.-Schäfer-Beispieltexte. Platzhalterwerte auf Karten werden lokal im Browser gespeichert. Patientendaten sollen nicht dauerhaft in Prompt-Templates eingetragen werden.
+
+## Qualitätsprüfung
+
+Nach Deployment prüfen:
+
+- Seite lädt ohne Konsolenfehler
+- `/api/health` meldet KV-Binding
+- `/api/seed?text=0` liest Assets
+- Startset-Import funktioniert
+- Prompt-Kopieren funktioniert
+- Prof.-Schäfer-Anhang wird angefügt
+- Drag-and-Drop funktioniert im manuellen Sortiermodus
+- Export funktioniert
+- PWA-Manifest und Icons laden
+
+## Betriebsgrenzen
+
+Workers KV ist für synchronisierte Konfigurationen geeignet, nicht für transaktionale Echtzeit-Kollaboration. Preview und Production nutzen hier bewusst denselben vorgegebenen KV-Namespace.
