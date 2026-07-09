@@ -47,14 +47,3 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Cache-Control: public, max-age=86400, must-revalidate
-
-/api/*
-  Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET,POST,PUT,HEAD,OPTIONS
-  Access-Control-Allow-Headers: Content-Type,Accept,If-Match,If-None-Match
-  Access-Control-Max-Age: 86400
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: no-referrer
-  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
-  Pragma: no-cache
-  Expires: 0

@@ -2,101 +2,20 @@
   "id": "/",
   "name": "RadPrompt",
   "short_name": "RadPrompt",
-  "description": "Kompaktes radiologisches Prompt-Board für Windows 11 mit Cloudflare-KV-Synchronisation, Favoritenleiste, Platzhalterfeldern und Prof.-Schäfer-Zusatzkorpus.",
+  "description": "Kompaktes Aero-Glass-Prompt-Buttonboard für radiologische KI-Workflows.",
   "start_url": "/",
   "scope": "/",
   "lang": "de-DE",
-  "dir": "ltr",
   "display": "standalone",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone",
-    "minimal-ui"
-  ],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
   "theme_color": "#08090c",
-  "background_color": "#050608",
-  "categories": [
-    "productivity",
-    "medical",
-    "utilities"
-  ],
-  "iarc_rating_id": "",
+  "background_color": "#05070b",
+  "categories": ["productivity", "utilities"],
   "prefer_related_applications": false,
-  "edge_side_panel": {
-    "preferred_width": 420
-  },
-  "launch_handler": {
-    "client_mode": [
-      "focus-existing",
-      "navigate-existing"
-    ]
-  },
-  "handle_links": "preferred",
   "icons": [
-    {
-      "src": "/assets/icons/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
-      "purpose": "any"
-    },
-    {
-      "src": "/assets/icons/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/assets/icons/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
-      "purpose": "monochrome"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "RadPrompt öffnen",
-      "short_name": "Öffnen",
-      "description": "Prompt-Board öffnen.",
-      "url": "/",
-      "icons": [
-        {
-          "src": "/assets/icons/favicon.svg",
-          "type": "image/svg+xml",
-          "sizes": "any",
-          "purpose": "any"
-        }
-      ]
-    },
-    {
-      "name": "Prompt kopieren",
-      "short_name": "Prompts",
-      "description": "RadPrompt-Hauptansicht mit Prompt-Buttons öffnen.",
-      "url": "/",
-      "icons": [
-        {
-          "src": "/assets/icons/favicon.svg",
-          "type": "image/svg+xml",
-          "sizes": "any",
-          "purpose": "any"
-        }
-      ]
-    },
-    {
-      "name": "Favoriten",
-      "short_name": "Favoriten",
-      "description": "RadPrompt öffnen und Favoritenleiste nutzen.",
-      "url": "/",
-      "icons": [
-        {
-          "src": "/assets/icons/favicon.svg",
-          "type": "image/svg+xml",
-          "sizes": "any",
-          "purpose": "any"
-        }
-      ]
-    }
-  ],
-  "related_applications": [],
-  "screenshots": []
+    {"src": "/assets/icons/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any"},
+    {"src": "/assets/icons/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable"},
+    {"src": "/assets/icons/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "monochrome"}
+  ]
 }
