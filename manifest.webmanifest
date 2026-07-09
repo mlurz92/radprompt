@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "RadPrompt Deck",
+  "name": "RadPrompt Minimal Deck",
   "short_name": "RadPrompt",
-  "description": "Sidebar-freies radiologisches Prompt-Deck mit kompakter Kachelmatrix, animiertem Detailpanel, Cloudflare-KV-Sync und Prof.-Schäfer-Anhangslogik.",
+  "description": "Minimalistisches radiologisches Prompt-Deck mit kompakter Kachelmatrix, horizontalen Filtern, animiertem Detailpanel, Cloudflare-KV-Sync und Prof.-Schäfer-Anhangslogik.",
   "lang": "de-DE",
   "dir": "ltr",
   "start_url": "/?source=pwa",
@@ -10,8 +10,8 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#05070c",
-  "theme_color": "#080b12",
+  "background_color": "#07090d",
+  "theme_color": "#0a0d12",
   "categories": ["productivity", "utilities"],
   "prefer_related_applications": false,
   "icons": [

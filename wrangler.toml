@@ -8,12 +8,12 @@ binding = "RADPROMPT_KV"
 id = "9e6bc961684e4b928ef276bd2ff1adb2"
 
 [vars]
-RADPROMPT_APP_NAME = "RadPrompt Deck"
+RADPROMPT_APP_NAME = "RadPrompt Minimal Deck"
 RADPROMPT_SCHEMA = "radprompt.v1"
 RADPROMPT_STATE_KEY = "radprompt:state:v1"
 RADPROMPT_HOSTNAME = "radprompt.pages.dev"
 RADPROMPT_KV_NAMESPACE_ID = "9e6bc961684e4b928ef276bd2ff1adb2"
-RADPROMPT_LAYOUT = "sidebarless-deck"
+RADPROMPT_LAYOUT = "minimal-deck"
 
 [env.production]
 name = "radprompt-production"
@@ -23,12 +23,12 @@ binding = "RADPROMPT_KV"
 id = "9e6bc961684e4b928ef276bd2ff1adb2"
 
 [env.production.vars]
-RADPROMPT_APP_NAME = "RadPrompt Deck"
+RADPROMPT_APP_NAME = "RadPrompt Minimal Deck"
 RADPROMPT_SCHEMA = "radprompt.v1"
 RADPROMPT_STATE_KEY = "radprompt:state:v1"
 RADPROMPT_HOSTNAME = "radprompt.pages.dev"
 RADPROMPT_KV_NAMESPACE_ID = "9e6bc961684e4b928ef276bd2ff1adb2"
-RADPROMPT_LAYOUT = "sidebarless-deck"
+RADPROMPT_LAYOUT = "minimal-deck"
 
 [env.preview]
 name = "radprompt-preview"
@@ -38,9 +38,9 @@ binding = "RADPROMPT_KV"
 id = "9e6bc961684e4b928ef276bd2ff1adb2"
 
 [env.preview.vars]
-RADPROMPT_APP_NAME = "RadPrompt Deck"
+RADPROMPT_APP_NAME = "RadPrompt Minimal Deck"
 RADPROMPT_SCHEMA = "radprompt.v1"
 RADPROMPT_STATE_KEY = "radprompt:state:v1"
 RADPROMPT_HOSTNAME = "radprompt.pages.dev"
 RADPROMPT_KV_NAMESPACE_ID = "9e6bc961684e4b928ef276bd2ff1adb2"
-RADPROMPT_LAYOUT = "sidebarless-deck"
+RADPROMPT_LAYOUT = "minimal-deck"
