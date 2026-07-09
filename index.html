@@ -2,186 +2,157 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#07080b">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080b12">
   <meta name="color-scheme" content="dark">
-  <meta name="application-name" content="RadPrompt">
-  <meta name="description" content="Kompaktes radiologisches Prompt-Board mit Cloudflare-KV-Synchronisierung, Favoriten, Ordnern und Prof.-Schäfer-Anhangslogik.">
+  <meta name="description" content="RadPrompt ist ein kompaktes Cloudflare-Pages-Prompt-Board für radiologische KI-Workflows.">
   <title>RadPrompt</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icons/radprompt-icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/dist/fuse.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
-  <script src="/app.js" defer></script>
 </head>
 <body>
-  <div id="app" class="app-shell">
+  <div class="aurora" aria-hidden="true"></div>
+  <div class="shell" id="app">
     <header class="topbar">
-      <button id="menuButton" class="icon-button menu-button" type="button" data-action="toggle-menu" aria-label="Menü öffnen"><i data-lucide="menu"></i></button>
-      <div class="brand">
-        <div class="brand-mark"><i data-lucide="radar"></i></div>
-        <div class="brand-text">
-          <strong class="brand-title">RadPrompt</strong>
-          <span class="brand-subtitle">Radiologisches Prompt-Board</span>
-        </div>
-      </div>
-      <label class="search-wrap" aria-label="Prompts suchen">
+      <button class="brand" type="button" data-action="home" aria-label="RadPrompt Start">
+        <span class="brand__mark"><img src="/icons/radprompt-icon.svg" alt=""></span>
+        <span class="brand__text"><strong>RadPrompt</strong><small>Prompt Deck</small></span>
+      </button>
+      <label class="search" aria-label="Prompts suchen">
         <i data-lucide="search"></i>
-        <input id="searchInput" type="search" placeholder="Prompts, Inhalte, Ordner suchen …" autocomplete="off" spellcheck="false">
+        <input id="searchInput" type="search" placeholder="Suchen, filtern, kopieren…" autocomplete="off" spellcheck="false">
       </label>
-      <div class="topbar-actions">
-        <span id="syncStatus" class="sync-pill" data-state="lade">Lade</span>
-        <button id="commandButton" class="icon-button" type="button" data-action="command" aria-label="Befehlspalette öffnen"><i data-lucide="command"></i></button>
-        <button id="syncButton" class="icon-button" type="button" data-action="sync" aria-label="Speichern"><i data-lucide="save"></i></button>
+      <div class="topbar__actions">
+        <span class="status" id="syncStatus" data-state="idle">Start</span>
+        <button class="icon-btn" type="button" data-action="new" title="Neuer Prompt" aria-label="Neuer Prompt"><i data-lucide="plus"></i></button>
+        <button class="icon-btn" type="button" data-action="seed" title="Startset laden" aria-label="Startset laden"><i data-lucide="database"></i></button>
+        <button class="icon-btn" type="button" data-action="export" title="Export" aria-label="Export"><i data-lucide="download"></i></button>
+        <button class="icon-btn" type="button" data-action="health" title="Diagnostik" aria-label="Diagnostik"><i data-lucide="activity"></i></button>
       </div>
     </header>
-    <aside class="sidebar">
-      <section class="sidebar-section">
-        <div class="sidebar-section-head">
-          <h2 class="section-title">Ordner</h2>
-          <button class="icon-button" type="button" data-action="new-folder" aria-label="Ordner erstellen"><i data-lucide="folder-plus"></i></button>
+    <main class="workspace">
+      <section class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow">Radiologie · KI · Schnellzugriff</p>
+          <h1>Kompakte Prompt-Kacheln. Volltext erst bei Auswahl.</h1>
+          <p>Ohne Seitenleiste, mit horizontalem Fokus-Deck, animiertem Detailpanel und mindestens drei Kacheln je Zeile auch bei schmalem Viewport.</p>
         </div>
-        <nav id="folderList" class="folder-list" aria-label="Prompt-Ordner"></nav>
-      </section>
-      <section class="sidebar-section">
-        <h2 class="section-title">Aktionen</h2>
-        <div class="side-actions">
-          <button id="newPromptButton" class="toolbar-button" type="button" data-action="new-prompt"><i data-lucide="plus"></i><span>Prompt</span></button>
-          <button id="importButton" class="toolbar-button" type="button" data-action="import"><i data-lucide="database"></i><span>Import</span></button>
-          <button id="exportButton" class="toolbar-button" type="button" data-action="export"><i data-lucide="download"></i><span>Export</span></button>
-          <button id="diagnosticsButton" class="toolbar-button" type="button" data-action="diagnostics"><i data-lucide="activity"></i><span>Diagnostik</span></button>
+        <div class="hero__metrics" aria-label="Statistiken">
+          <article><strong id="metricPrompts">0</strong><span>Prompts</span></article>
+          <article><strong id="metricFolders">0</strong><span>Ordner</span></article>
+          <article><strong id="metricFavorites">0</strong><span>Favoriten</span></article>
+          <article><strong id="metricUpdated">–</strong><span>Update</span></article>
         </div>
       </section>
-      <section class="sidebar-section">
-        <h2 class="section-title">Ansicht</h2>
-        <div class="settings-stack">
-          <label class="select-row"><span>Sortierung</span><select id="sortMode"><option value="manual">Manuell</option><option value="alpha">Alphabetisch</option><option value="recent">Zuletzt geändert</option><option value="used">Zuletzt genutzt</option></select></label>
-          <label class="select-row"><span>Layout</span><select id="viewMode"><option value="grid">Grid</option><option value="list">Liste</option></select></label>
-          <label class="switch-row"><input type="checkbox" data-setting="compactMode"><span>Kompaktmodus</span></label>
-          <label class="switch-row"><input type="checkbox" data-setting="denseCards"><span>Dichte Karten</span></label>
-          <label class="switch-row"><input type="checkbox" data-setting="effects" checked><span>Effekte</span></label>
-          <label class="switch-row"><input type="checkbox" data-setting="autosave" checked><span>Autosave</span></label>
+      <nav class="filters" aria-label="Promptfilter">
+        <div class="filter-strip" id="filterStrip"></div>
+        <div class="view-tools">
+          <select id="sortMode" aria-label="Sortierung">
+            <option value="manual">Manuell</option>
+            <option value="alpha">A–Z</option>
+            <option value="recent">Aktualisiert</option>
+            <option value="used">Genutzt</option>
+          </select>
+          <button class="soft-btn" type="button" data-action="compact"><i data-lucide="minimize-2"></i><span>Kompakt</span></button>
         </div>
+      </nav>
+      <section class="deck-wrap" aria-label="Prompt-Kacheln">
+        <div class="deck" id="promptGrid"></div>
+        <article class="empty" id="emptyState" hidden>
+          <i data-lucide="sparkles"></i>
+          <h2>Keine passenden Prompts</h2>
+          <p>Importiere das Startset oder lege einen neuen Prompt an.</p>
+          <div><button class="primary-btn" type="button" data-action="seed">Startset laden</button><button class="soft-btn" type="button" data-action="new">Neu</button></div>
+        </article>
       </section>
-    </aside>
-    <main class="main">
-      <div class="content-shell">
-        <section class="hero">
-          <div class="hero-card">
-            <p class="hero-kicker">Cloudflare KV · Windows 11 · Radiologie</p>
-            <h1 class="hero-title">Prompt-Templates per Mausklick kopieren.</h1>
-            <p class="hero-text">Ordner, Favoriten, Platzhalterfelder, Prof.-Schäfer-Anhangslogik und KV-Synchronisierung in einem kompakten Schnellzugriffsboard.</p>
-          </div>
-          <div class="metrics metric-grid">
-            <div class="metric"><strong id="metricFolders">0</strong><span>Ordner</span></div>
-            <div class="metric"><strong id="metricPrompts">0</strong><span>Prompts</span></div>
-            <div class="metric"><strong id="metricFavorites">0</strong><span>Favoriten</span></div>
-            <div class="metric"><strong id="metricUpdated">—</strong><span>Update</span></div>
-          </div>
-        </section>
-        <section id="favoritesBar" class="favorites-bar" aria-label="Favoriten"></section>
-        <section class="toolbar prompt-toolbar">
-          <div class="toolbar-group">
-            <button class="primary-action" type="button" data-action="new-prompt"><i data-lucide="plus"></i><span>Neuer Prompt</span></button>
-            <button class="secondary-action" type="button" data-action="new-folder"><i data-lucide="folder-plus"></i><span>Neuer Ordner</span></button>
-            <button class="secondary-action" type="button" data-action="clear-search"><i data-lucide="eraser"></i><span>Suche leeren</span></button>
-          </div>
-          <div class="toolbar-group">
-            <button class="secondary-action" type="button" data-action="reload-state"><i data-lucide="refresh-cw"></i><span>Neu laden</span></button>
-            <button class="secondary-action" type="button" data-action="sync"><i data-lucide="save"></i><span>Speichern</span></button>
-          </div>
-        </section>
-        <section id="promptGrid" class="prompt-grid" aria-label="Prompts"></section>
-        <section id="emptyState" class="empty-state" hidden>
-          <div>
-            <h2>Keine Prompts sichtbar</h2>
-            <p>Importiere das Startset oder erstelle einen neuen Prompt.</p>
-          </div>
-        </section>
-      </div>
     </main>
+    <aside class="detail" id="detailPanel" aria-live="polite" aria-label="Ausgewählter Prompt">
+      <div class="detail__empty" id="detailEmpty">
+        <i data-lucide="mouse-pointer-click"></i>
+        <h2>Prompt auswählen</h2>
+        <p>Eine Kachel anklicken, danach erscheinen Volltext, Platzhalter, Kopieren und Bearbeiten mit Animation.</p>
+      </div>
+      <div class="detail__content" id="detailContent" hidden>
+        <header class="detail__header">
+          <div>
+            <p class="detail__folder" id="detailFolder"></p>
+            <h2 id="detailTitle"></h2>
+          </div>
+          <div class="detail__header-actions">
+            <button class="icon-btn" type="button" data-action="favorite" title="Favorit" aria-label="Favorit"><i data-lucide="star"></i></button>
+            <button class="icon-btn" type="button" data-action="close-detail" title="Schließen" aria-label="Detail schließen"><i data-lucide="x"></i></button>
+          </div>
+        </header>
+        <section class="detail__fields" id="placeholderFields"></section>
+        <section class="detail__prompt">
+          <div class="detail__prompt-head"><span>Prompttext</span><small id="detailMeta"></small></div>
+          <pre id="promptPreview"></pre>
+        </section>
+        <footer class="detail__actions">
+          <button class="primary-btn" type="button" data-action="copy"><i data-lucide="copy"></i><span>Kopieren</span></button>
+          <button class="soft-btn" type="button" data-action="edit"><i data-lucide="pen-line"></i><span>Bearbeiten</span></button>
+          <button class="soft-btn" type="button" data-action="duplicate"><i data-lucide="copy-plus"></i><span>Duplizieren</span></button>
+          <button class="danger-btn" type="button" data-action="delete"><i data-lucide="trash-2"></i><span>Löschen</span></button>
+        </footer>
+      </div>
+    </aside>
   </div>
-  <aside id="editorDrawer" class="editor-drawer" aria-label="Prompt-Editor">
-    <header class="editor-header">
-      <h2 class="editor-title">Prompt bearbeiten</h2>
-      <button class="icon-button" type="button" data-action="close-editor" aria-label="Editor schließen"><i data-lucide="x"></i></button>
-    </header>
-    <form id="editorForm" class="editor-form" data-action="save-prompt">
-      <input id="editorPromptId" type="hidden">
-      <div class="form-grid">
-        <label class="form-field form-field--full"><span>Titel</span><input id="editorTitle" type="text" required maxlength="180"></label>
-        <label class="form-field form-field--full"><span>Beschreibung</span><input id="editorDescription" type="text" maxlength="500"></label>
-        <label class="form-field"><span>Ordner</span><select id="editorFolder" data-folder-select></select></label>
-        <label class="form-field"><span>Typ</span><select id="editorKind"><option value="standard">standard</option><option value="special">special</option><option value="schaefer">schaefer</option></select></label>
-        <label class="form-field"><span>Akzent</span><select id="editorAccent"><option value="blue">blue</option><option value="violet">violet</option><option value="emerald">emerald</option><option value="cyan">cyan</option><option value="amber">amber</option><option value="red">red</option></select></label>
-        <label class="checkbox-row"><input id="editorFavorite" type="checkbox"><span>Favorit</span></label>
-        <label class="checkbox-row"><input id="editorSchaeferCt" type="checkbox"><span>Prof. Schäfer CT anhängen</span></label>
-        <label class="checkbox-row"><input id="editorSchaeferMrt" type="checkbox"><span>Prof. Schäfer MRT anhängen</span></label>
-        <label class="form-field form-field--full"><span>Prompt</span><textarea id="editorBody" required spellcheck="false"></textarea></label>
+  <dialog class="dialog" id="editorDialog" aria-label="Prompt bearbeiten">
+    <form method="dialog" class="dialog__card" id="editorForm">
+      <header class="dialog__head"><h2 id="editorHeading">Prompt</h2><button class="icon-btn" type="button" data-action="dialog-close" aria-label="Schließen"><i data-lucide="x"></i></button></header>
+      <div class="dialog__body form-grid">
+        <input type="hidden" id="editorId">
+        <label><span>Titel</span><input id="editorTitle" required maxlength="180"></label>
+        <label><span>Ordner</span><select id="editorFolder"></select></label>
+        <label><span>Typ</span><select id="editorKind"><option value="standard">Standard</option><option value="special">Special</option><option value="schaefer">Prof. Schäfer</option></select></label>
+        <label><span>Akzent</span><select id="editorAccent"><option value="blue">Blau</option><option value="violet">Violett</option><option value="emerald">Emerald</option><option value="cyan">Cyan</option><option value="amber">Amber</option><option value="red">Rot</option></select></label>
+        <label class="span-2"><span>Beschreibung</span><input id="editorDescription" maxlength="500"></label>
+        <label class="span-2"><span>Prompttext</span><textarea id="editorBody" required></textarea></label>
+        <label class="check"><input id="editorFavorite" type="checkbox"><span>Favorit</span></label>
+        <label class="check"><input id="editorCt" type="checkbox"><span>CT-Beispiele anhängen</span></label>
+        <label class="check"><input id="editorMrt" type="checkbox"><span>MRT-Beispiele anhängen</span></label>
       </div>
-      <footer class="editor-footer">
-        <button class="danger-button" type="button" data-action="delete-prompt"><i data-lucide="trash-2"></i><span>Löschen</span></button>
-        <button class="secondary-action" type="button" data-action="duplicate-prompt"><i data-lucide="copy-plus"></i><span>Duplizieren</span></button>
-        <button class="primary-action" type="submit"><i data-lucide="check"></i><span>Übernehmen</span></button>
-      </footer>
-    </form>
-  </aside>
-  <dialog id="folderDialog">
-    <form class="modal-card" id="folderForm" data-action="folderForm">
-      <header class="modal-header"><h2 class="modal-title">Ordner</h2><button class="icon-button" type="button" data-action="close-dialog"><i data-lucide="x"></i></button></header>
-      <div class="modal-body form-grid">
-        <input id="folderId" type="hidden">
-        <label class="form-field form-field--full"><span>Name</span><input id="folderName" name="folderName" type="text" required maxlength="180"></label>
-        <label class="form-field form-field--full"><span>Lucide Icon</span><input id="folderIcon" name="folderIcon" type="text" value="folder" maxlength="80"></label>
-      </div>
-      <footer class="modal-footer"><button class="secondary-action" type="button" data-action="close-dialog">Abbrechen</button><button class="primary-action" type="submit">Speichern</button></footer>
+      <footer class="dialog__foot"><button class="soft-btn" type="button" data-action="dialog-close">Abbrechen</button><button class="primary-btn" value="default" type="submit">Speichern</button></footer>
     </form>
   </dialog>
-  <dialog id="importDialog">
-    <form class="modal-card" id="importForm" data-action="importForm">
-      <header class="modal-header"><h2 class="modal-title">Startset laden</h2><button class="icon-button" type="button" data-action="close-dialog"><i data-lucide="x"></i></button></header>
-      <div class="modal-body">
-        <div class="form-grid">
-          <label class="checkbox-row"><input name="prompts" type="checkbox" checked><span>Beispielprompts</span></label>
-          <label class="checkbox-row"><input name="schaeferCt" type="checkbox" checked><span>Prof. Schäfer CT</span></label>
-          <label class="checkbox-row"><input name="schaeferMrt" type="checkbox" checked><span>Prof. Schäfer MRT</span></label>
-          <label class="checkbox-row"><input name="replace" type="checkbox" checked><span>Vorhandenen Bestand ersetzen</span></label>
-          <label class="checkbox-row"><input name="favoriteFirst" type="checkbox" checked><span>Erste Prompts favorisieren</span></label>
-        </div>
-        <pre id="seedPreview" data-role="seed-preview"></pre>
+  <dialog class="dialog" id="seedDialog" aria-label="Startset laden">
+    <form method="dialog" class="dialog__card" id="seedForm">
+      <header class="dialog__head"><h2>Startset laden</h2><button class="icon-btn" type="button" data-action="dialog-close" aria-label="Schließen"><i data-lucide="x"></i></button></header>
+      <div class="dialog__body stacked">
+        <label class="check"><input name="prompts" type="checkbox" checked><span>Beispielprompts importieren</span></label>
+        <label class="check"><input name="schaeferCt" type="checkbox" checked><span>Prof.-Schäfer-CT-Beispiele importieren</span></label>
+        <label class="check"><input name="schaeferMrt" type="checkbox" checked><span>Prof.-Schäfer-MRT-Beispiele importieren</span></label>
+        <label class="check"><input name="replace" type="checkbox" checked><span>Vorhandenen Promptbestand ersetzen</span></label>
+        <label class="check"><input name="favoriteFirst" type="checkbox" checked><span>Erste Prompts favorisieren</span></label>
+        <pre id="seedPreview"></pre>
       </div>
-      <footer class="modal-footer"><button class="secondary-action" type="button" data-action="close-dialog">Abbrechen</button><button class="primary-action" type="submit">Import starten</button></footer>
+      <footer class="dialog__foot"><button class="soft-btn" type="button" data-action="dialog-close">Abbrechen</button><button class="primary-btn" type="submit">Importieren</button></footer>
     </form>
   </dialog>
-  <dialog id="exportDialog">
-    <section class="modal-card">
-      <header class="modal-header"><h2 class="modal-title">Export</h2><button class="icon-button" type="button" data-action="close-dialog"><i data-lucide="x"></i></button></header>
-      <div class="modal-body">
-        <div class="toolbar-group export-actions">
-          <button class="secondary-action" type="button" data-action="copy-export" data-format="json">JSON kopieren</button>
-          <button class="secondary-action" type="button" data-action="download-export" data-format="json">JSON laden</button>
-          <button class="secondary-action" type="button" data-action="download-export" data-format="prompts">Prompts TXT</button>
-          <button class="secondary-action" type="button" data-action="download-export" data-format="fulltxt">Volltext TXT</button>
-        </div>
-        <pre id="exportPreview" data-role="export-preview"></pre>
+  <dialog class="dialog" id="exportDialog" aria-label="Export">
+    <div class="dialog__card">
+      <header class="dialog__head"><h2>Export</h2><button class="icon-btn" type="button" data-action="dialog-close" aria-label="Schließen"><i data-lucide="x"></i></button></header>
+      <div class="dialog__body export-grid">
+        <button class="soft-btn" type="button" data-action="download" data-format="json">JSON</button>
+        <button class="soft-btn" type="button" data-action="download" data-format="prompts">Prompt-TXT</button>
+        <button class="soft-btn" type="button" data-action="download" data-format="fulltxt">Volltext-TXT</button>
+        <button class="soft-btn" type="button" data-action="download" data-format="schaefer-ct">Schäfer CT</button>
+        <button class="soft-btn" type="button" data-action="download" data-format="schaefer-mrt">Schäfer MRT</button>
+        <button class="primary-btn" type="button" data-action="copy-export" data-format="json">JSON kopieren</button>
       </div>
-    </section>
+    </div>
   </dialog>
-  <dialog id="diagnosticsDialog">
-    <section class="modal-card">
-      <header class="modal-header"><h2 class="modal-title">Diagnostik</h2><button class="icon-button" type="button" data-action="close-dialog"><i data-lucide="x"></i></button></header>
-      <div class="modal-body"><pre id="diagnosticsOutput" data-role="diagnostics-output"></pre></div>
-      <footer class="modal-footer"><button class="secondary-action" type="button" data-action="run-diagnostics">Erneut prüfen</button></footer>
-    </section>
+  <dialog class="dialog" id="healthDialog" aria-label="Diagnostik">
+    <div class="dialog__card">
+      <header class="dialog__head"><h2>Diagnostik</h2><button class="icon-btn" type="button" data-action="dialog-close" aria-label="Schließen"><i data-lucide="x"></i></button></header>
+      <div class="dialog__body"><pre id="healthOutput"></pre></div>
+    </div>
   </dialog>
-  <dialog id="commandDialog">
-    <section class="modal-card">
-      <header class="modal-header"><h2 class="modal-title">Befehlspalette</h2><button class="icon-button" type="button" data-action="close-dialog"><i data-lucide="x"></i></button></header>
-      <div class="modal-body"><input id="commandInput" type="search" placeholder="Befehl suchen …" autocomplete="off"><div id="commandList" class="command-list"></div></div>
-    </section>
-  </dialog>
-  <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.1.0/dist/fuse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

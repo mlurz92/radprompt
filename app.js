@@ -1,394 +1,778 @@
 (() => {
   "use strict";
-  const CONFIG = {
+
+  const APP = {
     schema: "radprompt.v1",
-    api: { state: "/api/state", health: "/api/health", seed: "/api/seed", export: "/api/export" },
-    storage: { state: "radprompt.local.state.v1", ui: "radprompt.local.ui.v1", placeholders: "radprompt.local.placeholders.v1" },
-    files: { prompts: "/data/Beispielprompts.txt", schaeferCt: "/data/Befundbeispiele%20Prof.%20Sch%C3%A4fer%20CT.txt", schaeferMrt: "/data/Befundbeispiele%20Prof.%20Sch%C3%A4fer%20MRT.txt" },
-    modalityOptions: ["CT", "MRT", "Röntgen", "CT&MRT"],
-    saveDelay: 1500,
-    saveFloor: 1200,
-    toastLife: 4600,
-    maxBody: 5000000
+    api: { state: "/api/state", seed: "/api/seed", health: "/api/health", export: "/api/export" },
+    data: { prompts: "/data/Beispielprompts.txt", ct: "/data/Befundbeispiele%20Prof.%20Sch%C3%A4fer%20CT.txt", mrt: "/data/Befundbeispiele%20Prof.%20Sch%C3%A4fer%20MRT.txt" },
+    storage: { state: "radprompt.rebuilt.state.v2", ui: "radprompt.rebuilt.ui.v2", placeholders: "radprompt.rebuilt.placeholders.v2" },
+    modalities: ["CT", "MRT", "Röntgen", "CT&MRT"],
+    saveDelay: 1400,
+    saveFloor: 1150,
+    toastMs: 4200
   };
-  const DEFAULT_FOLDERS = [
-    { id: "befundung", name: "Befundung", icon: "scan-search", order: 0 },
-    { id: "prof-schaefer", name: "Prof. Schäfer", icon: "stethoscope", order: 1 },
-    { id: "wissen", name: "Wissen", icon: "book-open", order: 2 },
-    { id: "allgemein", name: "Allgemein", icon: "sparkles", order: 3 }
-  ];
-  const DEFAULT_SETTINGS = { compactMode: false, effects: true, autosave: true, viewMode: "grid", sortMode: "manual", activeView: "all", selectedFolder: "all", denseCards: false };
-  const DOCS = { schaeferCt: { title: "# Befundbeispiele Prof. Schäfer CT.txt", text: "", updatedAt: "" }, schaeferMrt: { title: "# Befundbeispiele Prof. Schäfer MRT.txt", text: "", updatedAt: "" } };
-  const R = { state: emptyState(), placeholderValues: {}, visiblePromptIds: [], query: "", remoteHash: "", currentEditorId: "", dirty: false, localOnly: false, saveTimer: 0, saveInFlight: false, savePending: false, saveLastStart: 0, folderSortable: null, promptSortable: null, fuse: null, bootActionHandled: false };
+
+  const defaults = {
+    folders: [
+      { id: "befundung", name: "Befundung", icon: "scan-search", order: 0 },
+      { id: "prof-schaefer", name: "Prof. Schäfer", icon: "stethoscope", order: 1 },
+      { id: "wissen", name: "Wissen", icon: "book-open", order: 2 },
+      { id: "allgemein", name: "Allgemein", icon: "sparkles", order: 3 }
+    ],
+    settings: { selected: "all", sort: "manual", compact: false }
+  };
+
+  const S = {
+    state: emptyState(),
+    placeholders: {},
+    query: "",
+    selectedId: "",
+    remoteHash: "",
+    dirty: false,
+    saving: false,
+    saveQueued: false,
+    saveTimer: 0,
+    saveLast: 0,
+    fuse: null,
+    sortable: null,
+    localOnly: false
+  };
+
   const D = {};
+
   document.addEventListener("DOMContentLoaded", boot);
+
   async function boot() {
     try {
-      cacheDom();
+      bindDom();
       bindEvents();
       loadLocalUi();
       await loadState();
-      loadPlaceholderCache();
+      S.placeholders = readJson(APP.storage.placeholders, {});
       render();
-      initSortables();
-      handleInitialAction();
-      refreshIcons();
+      initSortable();
+      handleLaunch();
+      icons();
     } catch (error) {
-      showFatal(error);
+      fatal(error);
     }
   }
-  function cacheDom() {
+
+  function bindDom() {
     Object.assign(D, {
-      root: document.documentElement,
-      body: document.body,
-      app: byId("app"),
-      search: byId("searchInput"),
-      promptGrid: byId("promptGrid"),
-      folderList: byId("folderList"),
-      favoritesBar: byId("favoritesBar"),
-      emptyState: byId("emptyState"),
-      toastStack: byId("toastStack"),
-      editor: byId("editorDrawer"),
-      editorForm: byId("editorForm"),
-      command: byId("commandDialog"),
-      commandInput: byId("commandInput"),
-      commandList: byId("commandList"),
-      importDialog: byId("importDialog"),
-      exportDialog: byId("exportDialog"),
-      healthDialog: byId("diagnosticsDialog"),
-      folderDialog: byId("folderDialog"),
-      syncStatus: byId("syncStatus"),
-      metricsFolders: byId("metricFolders"),
-      metricsPrompts: byId("metricPrompts"),
-      metricsFavorites: byId("metricFavorites"),
-      metricsUpdated: byId("metricUpdated")
+      app: id("app"),
+      search: id("searchInput"),
+      status: id("syncStatus"),
+      filters: id("filterStrip"),
+      grid: id("promptGrid"),
+      empty: id("emptyState"),
+      detail: id("detailPanel"),
+      detailEmpty: id("detailEmpty"),
+      detailContent: id("detailContent"),
+      detailFolder: id("detailFolder"),
+      detailTitle: id("detailTitle"),
+      detailMeta: id("detailMeta"),
+      placeholderFields: id("placeholderFields"),
+      preview: id("promptPreview"),
+      sort: id("sortMode"),
+      mPrompts: id("metricPrompts"),
+      mFolders: id("metricFolders"),
+      mFavorites: id("metricFavorites"),
+      mUpdated: id("metricUpdated"),
+      editorDialog: id("editorDialog"),
+      editorForm: id("editorForm"),
+      editorHeading: id("editorHeading"),
+      seedDialog: id("seedDialog"),
+      seedForm: id("seedForm"),
+      seedPreview: id("seedPreview"),
+      exportDialog: id("exportDialog"),
+      healthDialog: id("healthDialog"),
+      healthOutput: id("healthOutput"),
+      toastStack: id("toastStack")
     });
   }
+
   function bindEvents() {
     document.addEventListener("click", onClick);
     document.addEventListener("input", onInput);
     document.addEventListener("change", onChange);
     document.addEventListener("submit", onSubmit);
-    document.addEventListener("keydown", onKeydown);
-    window.addEventListener("beforeunload", event => { if (R.dirty && !R.saveInFlight) { event.preventDefault(); event.returnValue = ""; } });
-    window.addEventListener("online", () => { toast("Netzwerk verfügbar", "Synchronisierung wird erneut versucht.", "success"); scheduleSave(250); });
-    window.addEventListener("offline", () => toast("Offline", "Änderungen werden lokal zwischengespeichert.", "warning"));
-    const direct = { newPromptButton: () => openEditorForNew({}), syncButton: () => saveNow({ force: true, user: true }), importButton: () => openImportDialog(), exportButton: () => openExportDialog(), diagnosticsButton: () => openDiagnosticsDialog(), commandButton: () => openCommand(), menuButton: () => toggleMenu() };
-    for (const [id, fn] of Object.entries(direct)) byId(id)?.addEventListener("click", event => { event.preventDefault(); fn(); });
-  }
-  async function loadState() {
-    setSync("lade", "Lade Zustand");
-    const local = readJsonStorage(CONFIG.storage.state, null);
-    try {
-      const response = await fetch(CONFIG.api.state, { headers: { Accept: "application/json" }, cache: "no-store" });
-      if (!response.ok) throw new Error(`State API ${response.status}`);
-      const payload = await response.json();
-      R.state = normalizeState(payload.state || payload);
-      R.remoteHash = payload.summary?.hash || payload.hash || R.state.meta.hash || "";
-      R.localOnly = false;
-      writeJsonStorage(CONFIG.storage.state, R.state);
-      setSync("ok", "Synchronisiert");
-    } catch {
-      R.state = normalizeState(local || emptyState());
-      R.localOnly = true;
-      setSync("lokal", local ? "Lokaler Zustand" : "Neuer lokaler Zustand");
-      if (local) toast("API nicht erreichbar", "RadPrompt arbeitet mit lokalem Browserzustand weiter.", "warning");
-    }
-  }
-  function loadLocalUi() {
-    const ui = readJsonStorage(CONFIG.storage.ui, {});
-    if (ui && typeof ui === "object") R.state.settings = { ...DEFAULT_SETTINGS, ...ui };
-  }
-  function persistLocalUi() { writeJsonStorage(CONFIG.storage.ui, normalizeSettings(R.state.settings)); }
-  function loadPlaceholderCache() { R.placeholderValues = readJsonStorage(CONFIG.storage.placeholders, {}) || {}; }
-  function persistPlaceholderCache() { writeJsonStorage(CONFIG.storage.placeholders, R.placeholderValues); }
-  function render() {
-    R.state = normalizeState(R.state);
-    rebuildFuse();
-    renderMetrics();
-    renderFolders();
-    renderFavorites();
-    renderPrompts();
-    renderEditor();
-    renderCommandList();
-    applyUi();
-    refreshIcons();
-  }
-  function renderMetrics() {
-    setText(D.metricsFolders, R.state.folders.length);
-    setText(D.metricsPrompts, R.state.prompts.length);
-    setText(D.metricsFavorites, R.state.favorites.length);
-    setText(D.metricsUpdated, formatDateTime(R.state.updatedAt));
-  }
-  function renderFolders() {
-    if (!D.folderList) return;
-    const selected = selectedFolder();
-    const folders = sortedFolders();
-    const staticRows = [folderRow({ id: "all", name: "Alle Prompts", icon: "layout-grid", count: R.state.prompts.length, active: selected === "all", sortable: false }), folderRow({ id: "favorites", name: "Favoriten", icon: "star", count: R.state.favorites.length, active: selected === "favorites", sortable: false })];
-    const dynamicRows = folders.map(folder => folderRow({ id: folder.id, name: folder.name, icon: folder.icon || "folder", count: R.state.prompts.filter(prompt => prompt.folderId === folder.id).length, active: selected === folder.id, sortable: true }));
-    D.folderList.innerHTML = [...staticRows, ...dynamicRows].join("");
-    syncFolderSortable();
-  }
-  function folderRow(folder) {
-    return `<button class="folder-row${folder.active ? " is-active" : ""}${folder.sortable ? " is-sortable" : ""}" type="button" data-action="select-folder" data-folder-id="${esc(folder.id)}" data-id="${esc(folder.id)}"><span class="folder-row__icon"><i data-lucide="${esc(folder.icon)}"></i></span><span class="folder-row__label">${html(folder.name)}</span><span class="folder-row__count">${folder.count}</span></button>`;
-  }
-  function renderFavorites() {
-    if (!D.favoritesBar) return;
-    const map = new Map(R.state.prompts.map(prompt => [prompt.id, prompt]));
-    const favorites = R.state.favorites.map(id => map.get(id)).filter(Boolean);
-    D.favoritesBar.innerHTML = favorites.length ? favorites.map(prompt => `<button class="favorite-pill" type="button" data-action="copy-prompt" data-prompt-id="${esc(prompt.id)}" title="${esc(prompt.title)}"><i data-lucide="zap"></i><span>${html(prompt.title)}</span></button>`).join("") : `<div class="favorites-empty">Keine Favoriten markiert</div>`;
-  }
-  function renderPrompts() {
-    if (!D.promptGrid) return;
-    const prompts = visiblePrompts();
-    R.visiblePromptIds = prompts.map(prompt => prompt.id);
-    D.promptGrid.dataset.sortableEnabled = canSortPromptGrid() ? "true" : "false";
-    D.promptGrid.innerHTML = prompts.map(promptCard).join("");
-    if (D.emptyState) D.emptyState.hidden = prompts.length > 0;
-    syncPromptSortable();
-  }
-  function promptCard(prompt) {
-    const folder = R.state.folders.find(item => item.id === prompt.folderId);
-    const placeholders = extractPlaceholders(prompt.body);
-    const favorite = isFavorite(prompt.id);
-    const cls = ["prompt-card", favorite ? "is-favorite" : "", prompt.kind === "schaefer" || prompt.appendSchaeferCt || prompt.appendSchaeferMrt ? "is-schaefer" : ""].filter(Boolean).join(" ");
-    const tags = [prompt.kind || "standard", prompt.appendSchaeferCt ? "CT-Anhang" : "", prompt.appendSchaeferMrt ? "MRT-Anhang" : ""].filter(Boolean).join(" · ");
-    return `<article class="${cls}" data-prompt-id="${esc(prompt.id)}" data-id="${esc(prompt.id)}" data-accent="${esc(prompt.accent || "blue")}"><header class="prompt-card__header"><div class="prompt-card__title-wrap"><h3 class="prompt-card__title">${html(prompt.title)}</h3><p class="prompt-card__meta">${html(folder?.name || "Ohne Ordner")}${tags ? " · " + html(tags) : ""}</p></div><button class="icon-button prompt-card__favorite" type="button" data-action="toggle-favorite" data-prompt-id="${esc(prompt.id)}" aria-label="Favorit"><i data-lucide="star"></i></button></header>${prompt.description ? `<p class="prompt-card__description">${html(prompt.description)}</p>` : ""}${placeholders.length ? `<div class="prompt-card__fields">${placeholders.map(name => placeholderField(prompt.id, name)).join("")}</div>` : ""}<div class="prompt-card__actions"><button class="primary-action" type="button" data-action="copy-prompt" data-prompt-id="${esc(prompt.id)}"><i data-lucide="copy"></i><span>Kopieren</span></button><button class="secondary-action" type="button" data-action="edit-prompt" data-prompt-id="${esc(prompt.id)}"><i data-lucide="panel-right-open"></i><span>Öffnen</span></button><button class="secondary-action" type="button" data-action="duplicate-prompt" data-prompt-id="${esc(prompt.id)}"><i data-lucide="copy-plus"></i><span>Duplizieren</span></button></div></article>`;
-  }
-  function placeholderField(promptId, name) {
-    const value = getPlaceholderValue(promptId, name);
-    if (["modalitat", "modalitaet"].includes(normalizeKey(name))) {
-      return `<label class="placeholder-field"><span>${html(name)}</span><select data-placeholder-input="true" data-prompt-id="${esc(promptId)}" data-placeholder-name="${esc(name)}"><option value="">Auswählen</option>${CONFIG.modalityOptions.map(option => `<option value="${esc(option)}"${option === value ? " selected" : ""}>${html(option)}</option>`).join("")}</select></label>`;
-    }
-    return `<label class="placeholder-field"><span>${html(name)}</span><input type="text" value="${esc(value)}" data-placeholder-input="true" data-prompt-id="${esc(promptId)}" data-placeholder-name="${esc(name)}" autocomplete="off" spellcheck="false"></label>`;
-  }
-  function renderEditor() {
-    if (!D.editor) return;
-    fillFolderSelects();
-    const prompt = R.currentEditorId ? R.state.prompts.find(item => item.id === R.currentEditorId) : null;
-    D.editor.classList.toggle("is-active", Boolean(prompt));
-    D.root.classList.toggle("is-editor-open", Boolean(prompt));
-    if (!prompt) return;
-    setVal("editorPromptId", prompt.id);
-    setVal("editorTitle", prompt.title);
-    setVal("editorDescription", prompt.description || "");
-    setVal("editorBody", prompt.body || "");
-    setVal("editorFolder", prompt.folderId || firstFolderId());
-    setVal("editorKind", prompt.kind || "standard");
-    setVal("editorAccent", prompt.accent || "blue");
-    setChecked("editorFavorite", isFavorite(prompt.id));
-    setChecked("editorSchaeferCt", Boolean(prompt.appendSchaeferCt || prompt.kind === "schaefer"));
-    setChecked("editorSchaeferMrt", Boolean(prompt.appendSchaeferMrt || prompt.kind === "schaefer"));
-  }
-  function fillFolderSelects() {
-    document.querySelectorAll("[data-folder-select],#editorFolder").forEach(select => {
-      const value = select.value || selectedFolder();
-      select.innerHTML = sortedFolders().map(folder => `<option value="${esc(folder.id)}">${html(folder.name)}</option>`).join("");
-      if ([...select.options].some(option => option.value === value)) select.value = value;
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("online", () => saveSoon(300));
+    window.addEventListener("beforeunload", event => {
+      if (!S.dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
     });
   }
-  function renderCommandList() {
-    if (!D.commandList) return;
-    const rows = [commandRow("new-prompt", "Neuen Prompt erstellen", "Plus", "plus"), commandRow("import", "Startset laden", "Seed", "database"), commandRow("export", "Export öffnen", "JSON/TXT", "download"), commandRow("diagnostics", "Diagnostik ausführen", "KV/API", "activity"), commandRow("toggle-compact", R.state.settings.compactMode ? "Kompaktmodus deaktivieren" : "Kompaktmodus aktivieren", "Ansicht", "panel-left")];
-    visiblePrompts().slice(0, 12).forEach(prompt => rows.push(commandRow("copy-prompt", prompt.title, "Prompt kopieren", "copy", prompt.id)));
-    D.commandList.innerHTML = rows.join("");
+
+  async function loadState() {
+    setStatus("sync", "Lade");
+    const local = readJson(APP.storage.state, null);
+    try {
+      const res = await fetch(APP.api.state, { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!res.ok) throw new Error(`State ${res.status}`);
+      const json = await res.json();
+      S.state = normalizeState(json.state || json);
+      S.remoteHash = json.summary?.hash || S.state.meta.hash || "";
+      S.localOnly = false;
+      writeJson(APP.storage.state, S.state);
+      setStatus("ok", "Sync");
+    } catch {
+      S.state = normalizeState(local || emptyState());
+      S.localOnly = true;
+      setStatus("local", "Lokal");
+      if (!S.state.prompts.length) toast("Lokaler Start", "API nicht erreichbar oder noch kein KV-State vorhanden.", "warning");
+    }
   }
-  function commandRow(action, title, meta, icon, promptId = "") { return `<button class="command-row" type="button" data-action="${esc(action)}"${promptId ? ` data-prompt-id="${esc(promptId)}"` : ""}><span class="command-row__icon"><i data-lucide="${esc(icon)}"></i></span><span class="command-row__main">${html(title)}</span><span class="command-row__meta">${html(meta)}</span></button>`; }
-  function applyUi() {
-    const s = R.state.settings;
-    D.root.classList.toggle("is-compact", Boolean(s.compactMode));
-    D.root.classList.toggle("is-effects-off", !s.effects);
-    D.root.classList.toggle("is-dense", Boolean(s.denseCards));
-    D.root.dataset.viewMode = s.viewMode || "grid";
-    D.root.dataset.sortMode = s.sortMode || "manual";
-    if (D.search && D.search.value !== R.query) D.search.value = R.query;
-    const mapping = { sortMode: s.sortMode, viewMode: s.viewMode };
-    for (const [id, value] of Object.entries(mapping)) if (byId(id)) byId(id).value = value;
-    document.querySelectorAll("[data-setting]").forEach(input => { const key = input.dataset.setting; if (input.type === "checkbox") input.checked = Boolean(s[key]); });
+
+  function render() {
+    S.state = normalizeState(S.state);
+    rebuildFuse();
+    renderMetrics();
+    renderFilters();
+    renderGrid();
+    renderDetail();
+    renderFolderOptions();
+    applyUi();
+    icons();
   }
-  async function onClick(event) {
-    const control = event.target.closest("[data-action],button");
-    if (!control) return;
-    const action = control.dataset.action || inferAction(control.id);
-    if (!action) return;
-    event.preventDefault();
-    await dispatch(action, control);
+
+  function renderMetrics() {
+    text(D.mPrompts, S.state.prompts.length);
+    text(D.mFolders, S.state.folders.length);
+    text(D.mFavorites, S.state.favorites.length);
+    text(D.mUpdated, fmtDate(S.state.updatedAt));
   }
-  function onInput(event) {
-    const target = event.target;
-    if (target === D.search) { R.query = target.value.trim(); renderPrompts(); renderCommandList(); refreshIcons(); return; }
-    if (target.matches("[data-placeholder-input='true']")) { setPlaceholderValue(target.dataset.promptId, target.dataset.placeholderName, target.value); persistPlaceholderCache(); return; }
-    if (target === D.commandInput) filterCommandList(target.value);
+
+  function renderFilters() {
+    const selected = S.state.settings.selected || "all";
+    const rows = [];
+    rows.push(chip("all", "Alle", "layout-grid", S.state.prompts.length, selected === "all"));
+    rows.push(chip("favorites", "Favoriten", "star", S.state.favorites.length, selected === "favorites"));
+    for (const f of folders()) rows.push(chip(f.id, f.name, f.icon || "folder", S.state.prompts.filter(p => p.folderId === f.id).length, selected === f.id));
+    D.filters.innerHTML = rows.join("");
+    if (D.sort) D.sort.value = S.state.settings.sort || "manual";
   }
-  function onChange(event) {
-    const target = event.target;
-    if (target.matches("[data-placeholder-input='true']")) { setPlaceholderValue(target.dataset.promptId, target.dataset.placeholderName, target.value); persistPlaceholderCache(); return; }
-    const setting = target.dataset.setting;
-    if (setting) { R.state.settings[setting] = target.type === "checkbox" ? target.checked : target.value; persistLocalUi(); applyUi(); return; }
-    if (target.id === "sortMode") { R.state.settings.sortMode = target.value; persistLocalUi(); renderPrompts(); return; }
-    if (target.id === "viewMode") { R.state.settings.viewMode = target.value; persistLocalUi(); renderPrompts(); return; }
+
+  function chip(idValue, label, icon, count, active) {
+    return `<button class="chip ${active ? "is-active" : ""}" type="button" data-action="filter" data-filter="${esc(idValue)}"><i data-lucide="${esc(icon)}"></i><span>${html(label)}</span><small>${count}</small></button>`;
   }
-  function onSubmit(event) {
-    const form = event.target;
-    if (form === D.editorForm) { event.preventDefault(); saveEditor(); return; }
-    if (form.id === "folderForm") { event.preventDefault(); saveFolderFromForm(form); return; }
-    if (form.id === "importForm") { event.preventDefault(); submitSeed(form); }
+
+  function renderGrid() {
+    const list = visiblePrompts();
+    D.grid.innerHTML = list.map(tile).join("");
+    D.empty.hidden = list.length > 0;
+    syncSortable();
   }
-  function onKeydown(event) {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openCommand(); return; }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); saveNow({ force: true, user: true }); return; }
-    if (event.key === "Escape") { if (R.currentEditorId) closeEditor(); closeTopDialog(); }
+
+  function tile(p) {
+    const folder = S.state.folders.find(f => f.id === p.folderId);
+    const ph = placeholders(p.body);
+    const selected = p.id === S.selectedId;
+    const fav = isFav(p.id);
+    const badges = [];
+    badges.push(`<span class="badge"><i data-lucide="${esc(iconForKind(p.kind))}"></i><span>${html(kindLabel(p.kind))}</span></span>`);
+    if (ph.length) badges.push(`<span class="badge"><i data-lucide="braces"></i><span>${ph.length}</span></span>`);
+    if (p.appendSchaeferCt || p.kind === "schaefer") badges.push(`<span class="badge prompt-count-hide">CT</span>`);
+    if (p.appendSchaeferMrt || p.kind === "schaefer") badges.push(`<span class="badge prompt-count-hide">MRT</span>`);
+    return `<button class="tile ${selected ? "is-selected" : ""} ${fav ? "is-favorite" : ""}" type="button" data-action="select" data-id="${esc(p.id)}" data-prompt-id="${esc(p.id)}" data-accent="${esc(p.accent || "blue")}"><span class="tile__top"><h3>${html(p.title)}</h3><span class="tile__star"><i data-lucide="star"></i></span></span><span class="tile__badges">${badges.join("")}</span><span class="tile__foot"><span>${html(folder?.name || "Ohne Ordner")}</span><span>${html(shortDate(p.updatedAt))}</span></span></button>`;
   }
-  async function dispatch(action, control) {
-    const id = control.dataset.promptId || R.currentEditorId || "";
-    const folderId = control.dataset.folderId || "";
-    if (action === "new-prompt") return openEditorForNew({});
-    if (["edit-prompt", "expand-prompt", "open-prompt"].includes(action)) return openEditor(id);
-    if (action === "copy-prompt") return copyPrompt(id);
-    if (action === "toggle-favorite") return toggleFavorite(id);
-    if (action === "duplicate-prompt") return duplicatePrompt(id);
-    if (action === "delete-prompt") return deletePrompt(id);
-    if (action === "close-editor") return closeEditor();
-    if (action === "select-folder") return selectFolder(folderId);
-    if (action === "new-folder") return openFolderDialog();
-    if (action === "delete-folder") return deleteFolder(folderId);
-    if (["sync", "save-state"].includes(action)) return saveNow({ force: true, user: true });
-    if (action === "reload-state") return reloadRemoteState();
-    if (action === "import") return openImportDialog();
-    if (action === "export") return openExportDialog();
-    if (action === "download-export") return downloadExport(control.dataset.format || "json");
-    if (action === "copy-export") return copyExport(control.dataset.format || "json");
-    if (["diagnostics", "health"].includes(action)) return openDiagnosticsDialog();
-    if (action === "run-diagnostics") return runDiagnostics();
-    if (action === "command") return openCommand();
-    if (action === "toggle-menu") return toggleMenu();
-    if (action === "close-dialog") return closeTopDialog();
-    if (action === "toggle-compact") return applySetting("compactMode", !R.state.settings.compactMode);
-    if (action === "clear-search") return clearSearch();
+
+  function renderDetail() {
+    const p = currentPrompt();
+    D.app.classList.toggle("has-detail", Boolean(p));
+    if (!p) {
+      D.detailEmpty.hidden = false;
+      D.detailContent.hidden = true;
+      return;
+    }
+    const folder = S.state.folders.find(f => f.id === p.folderId);
+    D.detailEmpty.hidden = true;
+    D.detailContent.hidden = false;
+    D.detailFolder.textContent = folder?.name || "Ohne Ordner";
+    D.detailTitle.textContent = p.title;
+    D.detailMeta.textContent = `${bytes(p.body)} Bytes · ${placeholders(p.body).length} Platzhalter`;
+    D.placeholderFields.innerHTML = placeholders(p.body).map(name => field(p.id, name)).join("");
+    D.preview.textContent = p.body || "";
+    animateDetail();
   }
-  function inferAction(id) { return ({ newPromptButton: "new-prompt", syncButton: "sync", importButton: "import", exportButton: "export", diagnosticsButton: "diagnostics", commandButton: "command", menuButton: "toggle-menu" })[id] || ""; }
-  function selectFolder(folderId) { R.state.settings.selectedFolder = folderId || "all"; R.state.settings.activeView = folderId === "favorites" ? "favorites" : "all"; R.query = ""; persistLocalUi(); render(); }
-  function selectedFolder() { return R.state.settings.selectedFolder || "all"; }
+
+  function field(pid, name) {
+    const val = getPlaceholder(pid, name);
+    const key = norm(name);
+    if (key === "modalitat" || key === "modalitaet") return `<label class="field"><span>${html(name)}</span><select data-placeholder="${esc(name)}" data-pid="${esc(pid)}"><option value="">Auswählen</option>${APP.modalities.map(x => `<option value="${esc(x)}" ${x === val ? "selected" : ""}>${html(x)}</option>`).join("")}</select></label>`;
+    return `<label class="field"><span>${html(name)}</span><input data-placeholder="${esc(name)}" data-pid="${esc(pid)}" value="${esc(val)}" autocomplete="off" spellcheck="false"></label>`;
+  }
+
+  function animateDetail() {
+    if (!D.detailContent || !D.detailContent.animate || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    D.detailContent.getAnimations().forEach(a => a.cancel());
+    D.detailContent.animate([{ opacity: 0, transform: "translateY(10px) scale(.992)", filter: "blur(8px)" }, { opacity: 1, transform: "translateY(0) scale(1)", filter: "blur(0)" }], { duration: 360, easing: "cubic-bezier(.22,1,.36,1)" });
+  }
+
   function visiblePrompts() {
-    let prompts = [...R.state.prompts];
-    const selected = selectedFolder();
-    if (selected === "favorites") { const rank = new Map(R.state.favorites.map((id, i) => [id, i])); prompts = prompts.filter(prompt => rank.has(prompt.id) || prompt.favorite).sort((a, b) => (rank.get(a.id) ?? 999999) - (rank.get(b.id) ?? 999999)); }
-    else if (selected !== "all") prompts = prompts.filter(prompt => prompt.folderId === selected);
-    if (R.query) prompts = searchPrompts(prompts, R.query);
-    return sortPrompts(prompts);
+    const selected = S.state.settings.selected || "all";
+    let list = [...S.state.prompts];
+    if (selected === "favorites") list = list.filter(p => isFav(p.id));
+    else if (selected !== "all") list = list.filter(p => p.folderId === selected);
+    if (S.query.trim()) list = search(list, S.query.trim());
+    return sortPrompts(list);
   }
-  function searchPrompts(scope, query) {
-    if (!query.trim()) return scope;
-    const ids = new Set(scope.map(prompt => prompt.id));
-    if (window.Fuse && R.fuse) return R.fuse.search(query).map(result => result.item).filter(prompt => ids.has(prompt.id));
-    const needle = normalizeSearch(query);
-    return scope.filter(prompt => normalizeSearch([prompt.title, prompt.description, prompt.body, prompt.kind, prompt.folderId].join(" ")).includes(needle));
+
+  function search(scope, q) {
+    if (window.Fuse && S.fuse) {
+      const ids = new Set(scope.map(p => p.id));
+      return S.fuse.search(q).map(r => r.item).filter(p => ids.has(p.id));
+    }
+    const needle = norm(q);
+    return scope.filter(p => norm(`${p.title} ${p.description} ${p.body}`).includes(needle));
   }
-  function sortPrompts(prompts) {
-    const mode = R.state.settings.sortMode || "manual";
-    if (selectedFolder() === "favorites" && !R.query) return prompts;
-    if (mode === "alpha") return [...prompts].sort((a, b) => a.title.localeCompare(b.title, "de", { sensitivity: "base" }));
-    if (mode === "recent") return [...prompts].sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
-    if (mode === "used") return [...prompts].sort((a, b) => String(b.lastUsedAt || "").localeCompare(String(a.lastUsedAt || "")));
-    return [...prompts].sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || a.title.localeCompare(b.title, "de", { sensitivity: "base" }));
+
+  function sortPrompts(list) {
+    const mode = S.state.settings.sort || "manual";
+    if (mode === "alpha") return list.sort((a, b) => a.title.localeCompare(b.title, "de", { sensitivity: "base" }));
+    if (mode === "recent") return list.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    if (mode === "used") return list.sort((a, b) => String(b.lastUsedAt || "").localeCompare(String(a.lastUsedAt || "")));
+    if ((S.state.settings.selected || "all") === "favorites") {
+      const rank = new Map(S.state.favorites.map((id, i) => [id, i]));
+      return list.sort((a, b) => (rank.get(a.id) ?? 9999) - (rank.get(b.id) ?? 9999));
+    }
+    return list.sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || a.title.localeCompare(b.title, "de", { sensitivity: "base" }));
   }
-  function sortedFolders() { return [...R.state.folders].sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || a.name.localeCompare(b.name, "de", { sensitivity: "base" })); }
-  function rebuildFuse() { R.fuse = window.Fuse ? new window.Fuse(R.state.prompts, { keys: [{ name: "title", weight: .48 }, { name: "description", weight: .2 }, { name: "body", weight: .24 }, { name: "kind", weight: .04 }, { name: "folderId", weight: .04 }], threshold: .34, ignoreLocation: true, minMatchCharLength: 2 }) : null; }
-  function openEditor(id) { const prompt = R.state.prompts.find(item => item.id === id); if (!prompt) return toast("Prompt nicht gefunden", "Der Prompt existiert nicht mehr.", "error"); R.currentEditorId = prompt.id; renderEditor(); focusEditorTitle(); }
-  function openEditorForNew(seed) { const now = new Date().toISOString(); const folderId = seed.folderId || (selectedFolder() !== "all" && selectedFolder() !== "favorites" ? selectedFolder() : firstFolderId()); const title = clean(seed.title || "Neuer Prompt", 180); const body = clean(seed.body || seed.text || "", CONFIG.maxBody); const prompt = normalizePrompt({ id: uniquePromptId(slugify(title) || "prompt"), title, description: clean(seed.description || "", 500), folderId, body, kind: seed.kind || classifyPrompt(title, body), accent: seed.accent || "blue", favorite: Boolean(seed.favorite), appendSchaeferCt: Boolean(seed.appendSchaeferCt), appendSchaeferMrt: Boolean(seed.appendSchaeferMrt), order: nextPromptOrder(folderId), createdAt: now, updatedAt: now }); R.state.prompts.push(prompt); if (prompt.favorite) addFavorite(prompt.id); R.currentEditorId = prompt.id; markDirty("Prompt erstellt"); render(); focusEditorTitle(); }
-  function saveEditor() { const id = val("editorPromptId") || R.currentEditorId; const index = R.state.prompts.findIndex(prompt => prompt.id === id); if (index < 0) return; const previous = R.state.prompts[index]; const title = clean(val("editorTitle") || previous.title || "Unbenannter Prompt", 180); const body = clean(val("editorBody") || "", CONFIG.maxBody); const kind = val("editorKind") || classifyPrompt(title, body); const favorite = checked("editorFavorite"); const prompt = normalizePrompt({ ...previous, title, description: clean(val("editorDescription") || "", 500), body, folderId: val("editorFolder") || previous.folderId || firstFolderId(), kind, accent: val("editorAccent") || previous.accent || "blue", favorite, appendSchaeferCt: kind === "schaefer" ? true : checked("editorSchaeferCt"), appendSchaeferMrt: kind === "schaefer" ? true : checked("editorSchaeferMrt"), updatedAt: new Date().toISOString() }); R.state.prompts[index] = prompt; favorite ? addFavorite(prompt.id) : removeFavorite(prompt.id); markDirty("Prompt gespeichert"); render(); toast("Prompt gespeichert", prompt.title, "success"); }
-  function closeEditor() { R.currentEditorId = ""; renderEditor(); }
-  function focusEditorTitle() { requestAnimationFrame(() => byId("editorTitle")?.focus()); }
-  async function copyPrompt(id) { const prompt = R.state.prompts.find(item => item.id === id); if (!prompt) return toast("Prompt nicht gefunden", "Kopieren nicht möglich.", "error"); try { await writeClipboard(buildPromptOutput(prompt)); prompt.lastUsedAt = new Date().toISOString(); markDirty("Verwendung gespeichert", { silent: true, delay: 4000 }); renderFavorites(); refreshIcons(); toast("Prompt kopiert", prompt.title, "success"); } catch (error) { toast("Kopieren fehlgeschlagen", error.message || "Zwischenablage blockiert.", "error"); } }
-  function buildPromptOutput(prompt) { let output = String(prompt.body || ""); for (const name of extractPlaceholders(output)) output = output.split(`***${name}***`).join(getPlaceholderValue(prompt.id, name) || `***${name}***`); const sections = [output.trim()]; if ((prompt.appendSchaeferCt || prompt.kind === "schaefer") && R.state.documents.schaeferCt.text) sections.push(`# Befundbeispiele Prof. Schäfer CT\n\n${R.state.documents.schaeferCt.text.trim()}`); if ((prompt.appendSchaeferMrt || prompt.kind === "schaefer") && R.state.documents.schaeferMrt.text) sections.push(`# Befundbeispiele Prof. Schäfer MRT\n\n${R.state.documents.schaeferMrt.text.trim()}`); return sections.filter(Boolean).join("\n\n").trim() + "\n"; }
-  async function writeClipboard(text) { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } const textarea = document.createElement("textarea"); textarea.value = text; textarea.className = "clipboard-fallback"; textarea.setAttribute("readonly", "readonly"); textarea.setAttribute("aria-hidden", "true"); document.body.appendChild(textarea); textarea.focus({ preventScroll: true }); textarea.select(); textarea.setSelectionRange(0, textarea.value.length); let ok = false; try { ok = document.execCommand("copy"); } finally { textarea.remove(); } if (!ok) throw new Error("Clipboard-Fallback nicht erfolgreich."); return true; }
-  function toggleFavorite(id) { const prompt = R.state.prompts.find(item => item.id === id); if (!prompt) return; if (isFavorite(id)) { removeFavorite(id); prompt.favorite = false; toast("Favorit entfernt", prompt.title, "info"); } else { addFavorite(id); prompt.favorite = true; toast("Favorit hinzugefügt", prompt.title, "success"); } prompt.updatedAt = new Date().toISOString(); markDirty("Favoriten geändert"); render(); }
-  function duplicatePrompt(id) { const source = R.state.prompts.find(item => item.id === id); if (!source) return; const now = new Date().toISOString(); const copy = normalizePrompt({ ...source, id: uniquePromptId(`${source.id}-kopie`), title: `${source.title} Kopie`, favorite: false, order: nextPromptOrder(source.folderId), createdAt: now, updatedAt: now, lastUsedAt: "" }); R.state.prompts.push(copy); R.currentEditorId = copy.id; markDirty("Prompt dupliziert"); render(); toast("Prompt dupliziert", copy.title, "success"); }
-  function deletePrompt(id) { const prompt = R.state.prompts.find(item => item.id === id); if (!prompt) return; if (!window.confirm(`Prompt wirklich löschen?\n\n${prompt.title}`)) return; R.state.prompts = R.state.prompts.filter(item => item.id !== id); removeFavorite(id); delete R.placeholderValues[id]; if (R.currentEditorId === id) R.currentEditorId = ""; persistPlaceholderCache(); markDirty("Prompt gelöscht"); render(); toast("Prompt gelöscht", prompt.title, "success"); }
-  function openFolderDialog(folderId = "") { const folder = R.state.folders.find(item => item.id === folderId); setVal("folderId", folder?.id || ""); setVal("folderName", folder?.name || ""); setVal("folderIcon", folder?.icon || "folder"); openDialog(D.folderDialog); }
-  function saveFolderFromForm() { const id = cleanId(val("folderId")); const name = clean(val("folderName"), 180); const icon = clean(val("folderIcon") || "folder", 80); if (!name) return toast("Ordnername fehlt", "Bitte einen Namen eingeben.", "warning"); const now = new Date().toISOString(); if (id) { const folder = R.state.folders.find(item => item.id === id); if (folder) Object.assign(folder, { name, icon, updatedAt: now }); } else { const folder = { id: uniqueFolderId(name), name, icon, order: nextFolderOrder(), createdAt: now, updatedAt: now }; R.state.folders.push(folder); R.state.settings.selectedFolder = folder.id; } closeTopDialog(); markDirty("Ordner gespeichert"); render(); }
-  function deleteFolder(folderId) { if (!folderId || ["all", "favorites"].includes(folderId)) return; const folder = R.state.folders.find(item => item.id === folderId); if (!folder) return; const target = R.state.folders.find(item => item.id !== folderId)?.id || "allgemein"; if (!window.confirm(`Ordner wirklich löschen?\n\n${folder.name}`)) return; R.state.prompts.filter(prompt => prompt.folderId === folderId).forEach(prompt => { prompt.folderId = target; prompt.updatedAt = new Date().toISOString(); }); R.state.folders = R.state.folders.filter(item => item.id !== folderId); if (selectedFolder() === folderId) R.state.settings.selectedFolder = "all"; markDirty("Ordner gelöscht"); render(); }
-  function addFavorite(id) { if (!R.state.favorites.includes(id)) R.state.favorites.push(id); }
-  function removeFavorite(id) { R.state.favorites = R.state.favorites.filter(item => item !== id); }
-  function isFavorite(id) { return R.state.favorites.includes(id); }
-  function initSortables() { if (!window.Sortable) return; if (D.folderList && !R.folderSortable) R.folderSortable = new window.Sortable(D.folderList, { animation: 180, draggable: ".folder-row.is-sortable", dataIdAttr: "data-id", ghostClass: "sortable-ghost", chosenClass: "sortable-chosen", dragClass: "sortable-drag", onEnd: applyFolderOrder }); if (D.promptGrid && !R.promptSortable) R.promptSortable = new window.Sortable(D.promptGrid, { animation: 180, draggable: ".prompt-card", dataIdAttr: "data-id", ghostClass: "sortable-ghost", chosenClass: "sortable-chosen", dragClass: "sortable-drag", onEnd: applyPromptOrder }); syncFolderSortable(); syncPromptSortable(); }
-  function syncFolderSortable() { R.folderSortable?.option("disabled", false); }
-  function canSortPromptGrid() { return Boolean(window.Sortable && !R.query && (R.state.settings.sortMode || "manual") === "manual"); }
-  function syncPromptSortable() { R.promptSortable?.option("disabled", !canSortPromptGrid()); }
-  function applyFolderOrder() { const ids = [...D.folderList.querySelectorAll(".folder-row.is-sortable[data-folder-id]")].map(item => item.dataset.folderId); const order = new Map(ids.map((id, index) => [id, index])); R.state.folders.forEach(folder => { if (order.has(folder.id)) { folder.order = order.get(folder.id); folder.updatedAt = new Date().toISOString(); } }); markDirty("Ordner sortiert"); renderFolders(); refreshIcons(); }
-  function applyPromptOrder() { if (!D.promptGrid || !canSortPromptGrid()) return; const ids = [...D.promptGrid.querySelectorAll(".prompt-card[data-prompt-id]")].map(item => item.dataset.promptId); if (!ids.length) return; if (selectedFolder() === "favorites") { const known = new Set(ids); R.state.favorites = ids.concat(R.state.favorites.filter(id => !known.has(id))); markDirty("Favoriten sortiert"); render(); return; } const rank = new Map(ids.map((id, i) => [id, i])); R.state.prompts.forEach(prompt => { if (rank.has(prompt.id)) { prompt.order = rank.get(prompt.id); prompt.updatedAt = new Date().toISOString(); } }); markDirty("Prompts sortiert"); render(); }
-  function markDirty(label = "Geändert", options = {}) { R.state = normalizeState(R.state); R.state.updatedAt = new Date().toISOString(); R.state.version = Math.max(1, Number(R.state.version || 0) + 1); R.dirty = true; writeJsonStorage(CONFIG.storage.state, R.state); setSync("dirty", label); if (R.state.settings.autosave !== false) scheduleSave(options.delay ?? CONFIG.saveDelay, options); }
-  function scheduleSave(delay = CONFIG.saveDelay, options = {}) { clearTimeout(R.saveTimer); R.saveTimer = window.setTimeout(() => saveNow({ silent: options.silent }), Math.max(delay, 0)); }
-  async function saveNow(options = {}) { if (!R.dirty && !options.force) { if (options.user) toast("Kein Speichern nötig", "Der Zustand ist bereits aktuell.", "info"); return; } if (R.saveInFlight) { R.savePending = true; return; } const elapsed = Date.now() - R.saveLastStart; if (elapsed < CONFIG.saveFloor && !options.force) { scheduleSave(CONFIG.saveFloor - elapsed + 50, options); return; } R.saveInFlight = true; R.saveLastStart = Date.now(); setSync("speichert", "Speichert"); try { const payload = { state: normalizeState(R.state) }; if (R.remoteHash) payload.expectedHash = R.remoteHash; let response = await fetch(CONFIG.api.state, { method: "PUT", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload) }); if (response.status === 409) response = await fetch(CONFIG.api.state, { method: "PUT", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ state: normalizeState(R.state), force: true }) }); if (!response.ok) throw new Error(`State API ${response.status}`); const result = await response.json(); if (result.state) R.state = normalizeState(result.state); R.remoteHash = result.summary?.hash || result.hash || R.state.meta.hash || R.remoteHash; R.localOnly = false; R.dirty = false; writeJsonStorage(CONFIG.storage.state, R.state); setSync("ok", "Gespeichert"); if (options.user) toast("Gespeichert", "Der Zustand wurde in Cloudflare KV synchronisiert.", "success"); } catch { R.localOnly = true; setSync("lokal", "Lokal gespeichert"); writeJsonStorage(CONFIG.storage.state, R.state); if (!options.silent) toast("Speichern in KV fehlgeschlagen", "Der Zustand bleibt lokal erhalten.", "warning"); } finally { R.saveInFlight = false; if (R.savePending) { R.savePending = false; scheduleSave(CONFIG.saveDelay); } renderMetrics(); } }
-  async function reloadRemoteState() { await loadState(); render(); toast("Neu geladen", "Der aktuelle Zustand wurde erneut geladen.", "success"); }
-  function openImportDialog() { openDialog(D.importDialog); previewSeed(); }
-  async function previewSeed() { const target = byId("seedPreview"); if (target) target.textContent = "Seed-Vorschau wird geladen…"; try { const response = await fetch(`${CONFIG.api.seed}?text=0`, { headers: { Accept: "application/json" }, cache: "no-store" }); if (!response.ok) throw new Error(`Seed API ${response.status}`); if (target) target.textContent = JSON.stringify(await response.json(), null, 2); } catch (error) { if (target) target.textContent = JSON.stringify({ ok: false, message: "Seed-Vorschau nicht verfügbar. Client-Fallback wird beim Import versucht.", error: error.message }, null, 2); } }
-  function readSeedOptions(form) { const read = name => { const el = form.querySelector(`[name='${name}']`); if (!el) return true; return el.type === "checkbox" ? el.checked : parseBool(el.value, true); }; return { prompts: read("prompts"), schaeferCt: read("schaeferCt"), schaeferMrt: read("schaeferMrt"), replace: read("replace"), favoriteFirst: read("favoriteFirst"), dryRun: false }; }
-  async function submitSeed(form) { const opts = readSeedOptions(form); setSync("import", "Import läuft"); try { const response = await fetch(CONFIG.api.seed, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(opts) }); if (!response.ok) throw new Error(`Seed API ${response.status}`); const result = await response.json(); if (result.state) R.state = normalizeState(result.state); R.remoteHash = result.summary?.hash || R.state.meta.hash || ""; R.dirty = false; R.localOnly = false; writeJsonStorage(CONFIG.storage.state, R.state); closeTopDialog(); setSync("ok", "Importiert"); render(); toast("Startset geladen", "Prompts und Prof.-Schäfer-Dokumente wurden importiert.", "success"); } catch { await clientSeedFallback(opts); } }
-  async function clientSeedFallback(opts) { try { const current = opts.replace ? emptyState() : normalizeState(R.state); if (opts.prompts) mergePrompts(current, parsePromptFile(await fetchText(CONFIG.files.prompts)).prompts); if (opts.schaeferCt) current.documents.schaeferCt = { title: DOCS.schaeferCt.title, text: await fetchText(CONFIG.files.schaeferCt), updatedAt: new Date().toISOString() }; if (opts.schaeferMrt) current.documents.schaeferMrt = { title: DOCS.schaeferMrt.title, text: await fetchText(CONFIG.files.schaeferMrt), updatedAt: new Date().toISOString() }; if (opts.favoriteFirst && !current.favorites.length) current.favorites = current.prompts.slice(0, 4).map(prompt => prompt.id); R.state = normalizeState(current); markDirty("Client-Import"); closeTopDialog(); render(); toast("Startset lokal geladen", "Server-Import nicht erreichbar, Client-Fallback wurde verwendet.", "warning"); } catch (error) { setSync("fehler", "Importfehler"); toast("Import fehlgeschlagen", error.message || "Seed-Dateien konnten nicht gelesen werden.", "error"); } }
-  async function fetchText(path) { const response = await fetch(path, { cache: "no-store" }); if (!response.ok) throw new Error(`${path} konnte nicht geladen werden.`); return response.text(); }
-  function openExportDialog() { openDialog(D.exportDialog); const target = byId("exportPreview"); if (target) target.textContent = JSON.stringify(exportPayload("manifest"), null, 2); }
-  async function downloadExport(format = "json") { try { const text = renderExportText(format); const ext = ["prompts", "fulltxt", "schaefer-ct", "schaefer-mrt"].includes(format) ? "txt" : "json"; downloadText(text, `radprompt-${format}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`); toast("Export erstellt", format, "success"); } catch (error) { toast("Export fehlgeschlagen", error.message, "error"); } }
-  async function copyExport(format = "json") { try { await writeClipboard(renderExportText(format)); toast("Export kopiert", format, "success"); } catch (error) { toast("Kopieren fehlgeschlagen", error.message, "error"); } }
-  function renderExportText(format) { if (format === "manifest") return JSON.stringify(exportPayload("manifest"), null, 2); if (format === "state") return JSON.stringify(R.state, null, 2); if (format === "prompts") return promptTextExport(false); if (format === "fulltxt") return promptTextExport(true); if (format === "schaefer-ct") return R.state.documents.schaeferCt.text || ""; if (format === "schaefer-mrt") return R.state.documents.schaeferMrt.text || ""; return JSON.stringify(exportPayload("json"), null, 2); }
-  function exportPayload(type) { const summary = { schema: R.state.schema, version: R.state.version, updatedAt: R.state.updatedAt, folders: R.state.folders.length, prompts: R.state.prompts.length, favorites: R.state.favorites.length, documents: { schaeferCt: bytes(R.state.documents.schaeferCt.text), schaeferMrt: bytes(R.state.documents.schaeferMrt.text) } }; if (type === "manifest") return { ok: true, exportedAt: new Date().toISOString(), summary, folders: sortedFolders().map(folder => ({ id: folder.id, name: folder.name, icon: folder.icon, order: folder.order, prompts: R.state.prompts.filter(prompt => prompt.folderId === folder.id).length })), prompts: R.state.prompts.map(prompt => ({ id: prompt.id, title: prompt.title, folderId: prompt.folderId, kind: prompt.kind, favorite: isFavorite(prompt.id), placeholders: extractPlaceholders(prompt.body), appendSchaeferCt: Boolean(prompt.appendSchaeferCt), appendSchaeferMrt: Boolean(prompt.appendSchaeferMrt), order: prompt.order })) }; return { ok: true, exportedAt: new Date().toISOString(), summary, state: R.state }; }
-  function promptTextExport(includeDocs) { const lines = ["RadPrompt Export", "", `Exportiert: ${new Date().toISOString()}`, `Prompts: ${R.state.prompts.length}`, ""]; for (const folder of sortedFolders()) { const prompts = R.state.prompts.filter(prompt => prompt.folderId === folder.id).sort((a, b) => Number(a.order || 0) - Number(b.order || 0)); if (!prompts.length) continue; lines.push(`# ${folder.name}`, ""); for (const prompt of prompts) lines.push(`// ${prompt.title}:`, "", String(prompt.body || "").trim(), "", "-".repeat(88), ""); } if (includeDocs && R.state.documents.schaeferCt.text) lines.push("# Befundbeispiele Prof. Schäfer CT", "", R.state.documents.schaeferCt.text.trim(), ""); if (includeDocs && R.state.documents.schaeferMrt.text) lines.push("# Befundbeispiele Prof. Schäfer MRT", "", R.state.documents.schaeferMrt.text.trim(), ""); return lines.join("\n").replace(/\n{4,}/g, "\n\n\n").trim() + "\n"; }
-  function downloadText(text, filename) { const blob = new Blob([text], { type: filename.endsWith(".json") ? "application/json;charset=utf-8" : "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = filename.replace(/[\\/:*?"<>|]+/g, "-"); link.className = "download-link"; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
-  function openDiagnosticsDialog() { openDialog(D.healthDialog); runDiagnostics(); }
-  async function runDiagnostics() { const target = byId("diagnosticsOutput"); if (target) target.textContent = "Diagnostik läuft…"; try { const response = await fetch(CONFIG.api.health, { headers: { Accept: "application/json" }, cache: "no-store" }); const payload = await response.json(); if (target) target.textContent = JSON.stringify(payload, null, 2); toast(payload.ok ? "Diagnostik erfolgreich" : "Diagnostik mit Hinweis", payload.message || "Bitte Ausgabe prüfen.", payload.ok ? "success" : "warning"); } catch (error) { if (target) target.textContent = String(error.stack || error.message || error); toast("Diagnostik fehlgeschlagen", "Health-Endpunkt nicht erreichbar.", "error"); } }
-  function openCommand() { openDialog(D.command); renderCommandList(); requestAnimationFrame(() => { if (D.commandInput) { D.commandInput.value = ""; D.commandInput.focus(); } }); }
-  function filterCommandList(query) { const needle = normalizeSearch(query || ""); D.commandList?.querySelectorAll(".command-row").forEach(row => { row.hidden = needle && !normalizeSearch(row.textContent || "").includes(needle); }); }
-  function openDialog(dialog) { if (!dialog) return; dialog.hidden = false; if (typeof dialog.showModal === "function" && !dialog.open) dialog.showModal(); else dialog.classList.add("is-open"); D.root.classList.add("has-dialog"); refreshIcons(); }
-  function closeTopDialog() { const dialogs = [...document.querySelectorAll("dialog[open],.modal.is-open")]; const dialog = dialogs.at(-1); if (!dialog) return; if (typeof dialog.close === "function" && dialog.open) dialog.close(); else dialog.hidden = true; dialog.classList.remove("is-open"); D.root.classList.toggle("has-dialog", document.querySelectorAll("dialog[open],.modal.is-open").length > 0); }
-  function toggleMenu() { D.root.classList.toggle("is-menu-open"); }
-  function clearSearch() { R.query = ""; if (D.search) D.search.value = ""; renderPrompts(); }
-  function applySetting(name, value) { R.state.settings[name] = value; persistLocalUi(); render(); }
-  function setSync(kind, label) { if (D.syncStatus) { D.syncStatus.dataset.state = kind; D.syncStatus.textContent = label; } }
-  function toast(title, message = "", type = "info") { if (!D.toastStack) return; const node = document.createElement("article"); node.className = `toast toast--${type}`; node.innerHTML = `<div class="toast__icon"><i data-lucide="${esc(toastIcon(type))}"></i></div><div class="toast__body"><strong>${html(title)}</strong>${message ? `<p>${html(message)}</p>` : ""}</div><button class="toast__close" type="button" aria-label="Hinweis schließen"><i data-lucide="x"></i></button>`; node.querySelector("button").addEventListener("click", () => node.remove(), { once: true }); D.toastStack.appendChild(node); refreshIcons(); setTimeout(() => node.remove(), CONFIG.toastLife); }
-  function toastIcon(type) { return type === "success" ? "check-circle-2" : type === "warning" ? "alert-triangle" : type === "error" ? "x-circle" : "info"; }
-  function handleInitialAction() { if (R.bootActionHandled) return; R.bootActionHandled = true; const url = new URL(location.href); const action = url.searchParams.get("action") || ""; const sharedTitle = url.searchParams.get("title") || ""; const sharedText = url.searchParams.get("text") || ""; const sharedUrl = url.searchParams.get("url") || ""; if (sharedTitle || sharedText || sharedUrl) return openEditorForNew({ title: sharedTitle || "Geteilter Prompt", body: [sharedText, sharedUrl].filter(Boolean).join("\n\n"), description: sharedUrl ? "Aus Share-Target übernommen" : "" }); if (action === "new-prompt") openEditorForNew({}); else if (action === "import") openImportDialog(); else if (action === "diagnostics") openDiagnosticsDialog(); else if (action === "export") openExportDialog(); }
-  function parsePromptFile(text) { const source = String(text || "").replace(/\r\n?/g, "\n"); const matches = [...source.matchAll(/^\/\/\s*(.+?):\s*$/gm)]; const prompts = []; for (let i = 0; i < matches.length; i++) { const title = clean(matches[i][1], 180); const start = matches[i].index + matches[i][0].length; const end = i + 1 < matches.length ? matches[i + 1].index : source.length; const body = clean(source.slice(start, end), CONFIG.maxBody); if (!title || !body) continue; const kind = classifyPrompt(title, body); prompts.push(normalizePrompt({ id: uniqueLocalId(prompts, slugify(title)), title, description: describePrompt(title, body, kind), folderId: classifyFolder(title, body, kind), body, kind, accent: accentForPrompt(title, kind), favorite: prompts.length < 4, appendSchaeferCt: kind === "schaefer", appendSchaeferMrt: kind === "schaefer", order: prompts.length })); } return { prompts }; }
-  function mergePrompts(state, prompts) { const byId = new Map(state.prompts.map(prompt => [prompt.id, prompt])); for (const prompt of prompts) { if (byId.has(prompt.id)) Object.assign(byId.get(prompt.id), prompt, { updatedAt: new Date().toISOString() }); else state.prompts.push(prompt); } state.favorites = unique([...state.favorites, ...state.prompts.filter(prompt => prompt.favorite).map(prompt => prompt.id)]).filter(id => state.prompts.some(prompt => prompt.id === id)); }
-  function emptyState() { const now = new Date().toISOString(); return { schema: CONFIG.schema, version: 0, updatedAt: now, folders: DEFAULT_FOLDERS.map(folder => ({ ...folder, createdAt: now, updatedAt: now })), prompts: [], favorites: [], documents: clone(DOCS), settings: { ...DEFAULT_SETTINGS }, meta: { seededAt: "", source: "", hash: "" } }; }
-  function normalizeState(input) { const raw = input && typeof input === "object" ? input : {}; const base = emptyState(); const folders = (Array.isArray(raw.folders) && raw.folders.length ? raw.folders : base.folders).map(normalizeFolder).filter(folder => folder.id && folder.name); const folderIds = new Set(folders.map(folder => folder.id)); const fallback = folders[0]?.id || "allgemein"; const prompts = (Array.isArray(raw.prompts) ? raw.prompts : []).map(prompt => normalizePrompt(prompt, fallback)).filter(prompt => prompt.id && prompt.title).map((prompt, index) => { if (!folderIds.has(prompt.folderId)) prompt.folderId = fallback; if (!Number.isFinite(Number(prompt.order))) prompt.order = index; return prompt; }); const promptIds = new Set(prompts.map(prompt => prompt.id)); const favorites = unique([...(Array.isArray(raw.favorites) ? raw.favorites : []), ...prompts.filter(prompt => prompt.favorite).map(prompt => prompt.id)]).filter(id => promptIds.has(id)); return { schema: CONFIG.schema, version: Math.max(0, Number(raw.version || 0)), updatedAt: validDate(raw.updatedAt) || new Date().toISOString(), folders: folders.sort((a, b) => Number(a.order || 0) - Number(b.order || 0)), prompts, favorites, documents: { schaeferCt: normalizeDocument(raw.documents?.schaeferCt, DOCS.schaeferCt), schaeferMrt: normalizeDocument(raw.documents?.schaeferMrt, DOCS.schaeferMrt) }, settings: normalizeSettings({ ...raw.settings, ...R.state?.settings }), meta: { seededAt: "", source: "", hash: "", ...(raw.meta || {}) } }; }
-  function normalizeFolder(input) { const now = new Date().toISOString(); return { id: cleanId(input?.id || slugify(input?.name || "ordner")), name: clean(input?.name || "Ordner", 180), icon: clean(input?.icon || "folder", 80), order: Number.isFinite(Number(input?.order)) ? Number(input.order) : 0, createdAt: validDate(input?.createdAt) || now, updatedAt: validDate(input?.updatedAt) || now }; }
-  function normalizePrompt(input, fallback = "allgemein") { const now = new Date().toISOString(); const body = clean(input?.body || "", CONFIG.maxBody); const title = clean(input?.title || "Unbenannter Prompt", 180); const kind = clean(input?.kind || classifyPrompt(title, body), 64); return { id: cleanId(input?.id || slugify(title) || `prompt-${Date.now().toString(36)}`), title, description: clean(input?.description || "", 500), folderId: cleanId(input?.folderId || fallback), body, kind, accent: clean(input?.accent || accentForPrompt(title, kind), 48), favorite: Boolean(input?.favorite), appendSchaeferCt: Boolean(input?.appendSchaeferCt), appendSchaeferMrt: Boolean(input?.appendSchaeferMrt), order: Number.isFinite(Number(input?.order)) ? Number(input.order) : 0, createdAt: validDate(input?.createdAt) || now, updatedAt: validDate(input?.updatedAt) || now, lastUsedAt: validDate(input?.lastUsedAt) || "" }; }
-  function normalizeDocument(input, fallback) { return { title: clean(input?.title || fallback.title, 240), text: clean(input?.text || fallback.text || "", CONFIG.maxBody * 2), updatedAt: validDate(input?.updatedAt) || fallback.updatedAt || "" }; }
-  function normalizeSettings(input = {}) { return { ...DEFAULT_SETTINGS, ...(input || {}), viewMode: ["grid", "list"].includes(input.viewMode) ? input.viewMode : "grid", sortMode: ["manual", "alpha", "recent", "used"].includes(input.sortMode) ? input.sortMode : "manual" }; }
-  function classifyPrompt(title, body) { const haystack = normalizeSearch(`${title} ${body}`); if (haystack.includes("prof schafer") || haystack.includes("prof schaefer") || haystack.includes("befundstil")) return "schaefer"; if (extractPlaceholders(body).length) return "special"; return "standard"; }
-  function classifyFolder(title, body, kind) { const haystack = normalizeSearch(`${title} ${body}`); if (kind === "schaefer") return "prof-schaefer"; if (haystack.includes("protokoll") || haystack.includes("staging") || haystack.includes("ubersicht") || haystack.includes("übersicht")) return "wissen"; if (haystack.includes("befund") || haystack.includes("radiologisch") || haystack.includes("bildinterpretation")) return "befundung"; return "allgemein"; }
-  function accentForPrompt(title, kind) { const haystack = normalizeSearch(`${title} ${kind}`); if (kind === "schaefer") return "violet"; if (haystack.includes("revision")) return "amber"; if (haystack.includes("staging")) return "red"; if (haystack.includes("protokoll")) return "cyan"; if (haystack.includes("ubersicht") || haystack.includes("übersicht")) return "emerald"; return "blue"; }
-  function describePrompt(title, body, kind) { if (kind === "schaefer") return "Prompt zur kompakten Prof.-Schäfer-Stiloptimierung mit optionalem CT-/MRT-Beispielanhang."; const placeholders = extractPlaceholders(body); return placeholders.length ? `Prompt mit ${placeholders.length} Platzhalter${placeholders.length === 1 ? "" : "n"}.` : title; }
-  function extractPlaceholders(text) { const found = []; String(text || "").replace(/\*\*\*([^*]+?)\*\*\*/g, (_, name) => { const cleaned = clean(name, 140).replace(/\s+/g, " "); if (cleaned) found.push(cleaned); return ""; }); return unique(found); }
-  function getPlaceholderValue(promptId, name) { return R.placeholderValues?.[promptId]?.[name] || ""; }
-  function setPlaceholderValue(promptId, name, value) { if (!promptId || !name) return; if (!R.placeholderValues[promptId]) R.placeholderValues[promptId] = {}; R.placeholderValues[promptId][name] = String(value || ""); }
-  function firstFolderId() { return R.state.folders[0]?.id || "allgemein"; }
-  function nextPromptOrder(folderId) { const list = R.state.prompts.filter(prompt => prompt.folderId === folderId); return list.length ? Math.max(...list.map(prompt => Number(prompt.order || 0))) + 1 : 0; }
-  function nextFolderOrder() { return R.state.folders.length ? Math.max(...R.state.folders.map(folder => Number(folder.order || 0))) + 1 : 0; }
-  function uniquePromptId(base) { const root = cleanId(base || "prompt") || "prompt"; const ids = new Set(R.state.prompts.map(prompt => prompt.id)); if (!ids.has(root)) return root; let i = 2; while (ids.has(`${root}-${i}`)) i++; return `${root}-${i}`; }
-  function uniqueLocalId(list, base) { const root = cleanId(base || "prompt") || "prompt"; const ids = new Set(list.map(item => item.id)); if (!ids.has(root)) return root; let i = 2; while (ids.has(`${root}-${i}`)) i++; return `${root}-${i}`; }
-  function uniqueFolderId(name) { const root = cleanId(slugify(name) || "ordner"); const ids = new Set(R.state.folders.map(folder => folder.id)); if (!ids.has(root)) return root; let i = 2; while (ids.has(`${root}-${i}`)) i++; return `${root}-${i}`; }
-  function slugify(value) { return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100); }
-  function cleanId(value) { return slugify(value || "").slice(0, 140); }
+
+  function rebuildFuse() {
+    S.fuse = window.Fuse ? new window.Fuse(S.state.prompts, { keys: [{ name: "title", weight: .5 }, { name: "description", weight: .18 }, { name: "body", weight: .25 }, { name: "folderId", weight: .07 }], threshold: .34, ignoreLocation: true, minMatchCharLength: 2 }) : null;
+  }
+
+  function onClick(e) {
+    const el = e.target.closest("[data-action]");
+    if (!el) return;
+    e.preventDefault();
+    dispatch(el.dataset.action, el);
+  }
+
+  function onInput(e) {
+    if (e.target === D.search) {
+      S.query = e.target.value;
+      renderGrid();
+      icons();
+      return;
+    }
+    if (e.target.dataset.placeholder) {
+      setPlaceholder(e.target.dataset.pid, e.target.dataset.placeholder, e.target.value);
+      writeJson(APP.storage.placeholders, S.placeholders);
+    }
+  }
+
+  function onChange(e) {
+    if (e.target === D.sort) {
+      S.state.settings.sort = e.target.value;
+      saveUi();
+      renderGrid();
+      return;
+    }
+    if (e.target.dataset.placeholder) {
+      setPlaceholder(e.target.dataset.pid, e.target.dataset.placeholder, e.target.value);
+      writeJson(APP.storage.placeholders, S.placeholders);
+    }
+  }
+
+  function onSubmit(e) {
+    if (e.target === D.editorForm) {
+      e.preventDefault();
+      saveEditor();
+      return;
+    }
+    if (e.target === D.seedForm) {
+      e.preventDefault();
+      runSeed();
+    }
+  }
+
+  function onKey(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      D.search.focus();
+      D.search.select();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      saveNow(true);
+    }
+    if (e.key === "Escape") closeTopDialog();
+  }
+
+  async function dispatch(action, el) {
+    if (action === "select") return selectPrompt(el.dataset.id || el.dataset.promptId);
+    if (action === "filter") return setFilter(el.dataset.filter || "all");
+    if (action === "copy") return copyPrompt(S.selectedId);
+    if (action === "favorite") return toggleFav(S.selectedId);
+    if (action === "close-detail") return closeDetail();
+    if (action === "new") return openEditor(null);
+    if (action === "edit") return openEditor(S.selectedId);
+    if (action === "duplicate") return duplicatePrompt(S.selectedId);
+    if (action === "delete") return deletePrompt(S.selectedId);
+    if (action === "seed") return openSeed();
+    if (action === "export") return openDialog(D.exportDialog);
+    if (action === "health") return openHealth();
+    if (action === "download") return downloadExport(el.dataset.format || "json");
+    if (action === "copy-export") return copyExport(el.dataset.format || "json");
+    if (action === "dialog-close") return closeTopDialog();
+    if (action === "compact") return toggleCompact();
+    if (action === "home") return setFilter("all");
+  }
+
+  function selectPrompt(pid) {
+    if (!pid || !S.state.prompts.some(p => p.id === pid)) return;
+    S.selectedId = pid;
+    renderGrid();
+    renderDetail();
+    icons();
+  }
+
+  function setFilter(filter) {
+    S.state.settings.selected = filter;
+    S.query = "";
+    D.search.value = "";
+    saveUi();
+    if (S.selectedId && !visiblePrompts().some(p => p.id === S.selectedId)) S.selectedId = "";
+    render();
+  }
+
+  function closeDetail() {
+    S.selectedId = "";
+    renderGrid();
+    renderDetail();
+    icons();
+  }
+
+  async function copyPrompt(pid) {
+    const p = S.state.prompts.find(x => x.id === pid);
+    if (!p) return toast("Kein Prompt ausgewählt", "Bitte zuerst eine Kachel auswählen.", "warning");
+    try {
+      const output = buildPrompt(p);
+      await clipboard(output);
+      p.lastUsedAt = now();
+      markDirty("Kopiert", 3500);
+      toast("Prompt kopiert", p.title, "success");
+    } catch (err) {
+      toast("Kopieren fehlgeschlagen", err.message || "Zwischenablage nicht verfügbar.", "error");
+    }
+  }
+
+  function buildPrompt(p) {
+    let out = String(p.body || "");
+    for (const name of placeholders(out)) out = out.split(`***${name}***`).join(getPlaceholder(p.id, name) || `***${name}***`);
+    const parts = [out.trim()];
+    if ((p.appendSchaeferCt || p.kind === "schaefer") && S.state.documents.schaeferCt.text) parts.push(`# Befundbeispiele Prof. Schäfer CT\n\n${S.state.documents.schaeferCt.text.trim()}`);
+    if ((p.appendSchaeferMrt || p.kind === "schaefer") && S.state.documents.schaeferMrt.text) parts.push(`# Befundbeispiele Prof. Schäfer MRT\n\n${S.state.documents.schaeferMrt.text.trim()}`);
+    return parts.filter(Boolean).join("\n\n").trim() + "\n";
+  }
+
+  async function clipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    const t = document.createElement("textarea");
+    t.className = "clipboard-proxy";
+    t.value = text;
+    t.setAttribute("readonly", "readonly");
+    document.body.appendChild(t);
+    t.select();
+    const ok = document.execCommand("copy");
+    t.remove();
+    if (!ok) throw new Error("Clipboard-Fallback fehlgeschlagen.");
+  }
+
+  function toggleFav(pid) {
+    const p = S.state.prompts.find(x => x.id === pid);
+    if (!p) return;
+    if (isFav(pid)) S.state.favorites = S.state.favorites.filter(x => x !== pid);
+    else S.state.favorites.push(pid);
+    p.favorite = isFav(pid);
+    p.updatedAt = now();
+    markDirty("Favorit geändert");
+    render();
+  }
+
+  function openEditor(pid) {
+    const p = pid ? S.state.prompts.find(x => x.id === pid) : null;
+    fillEditorFolders();
+    val("editorId", p?.id || "");
+    val("editorTitle", p?.title || "Neuer Prompt");
+    val("editorDescription", p?.description || "");
+    val("editorBody", p?.body || "");
+    val("editorFolder", p?.folderId || currentFolderForNew());
+    val("editorKind", p?.kind || "standard");
+    val("editorAccent", p?.accent || "blue");
+    check("editorFavorite", p ? isFav(p.id) : false);
+    check("editorCt", Boolean(p?.appendSchaeferCt));
+    check("editorMrt", Boolean(p?.appendSchaeferMrt));
+    D.editorHeading.textContent = p ? "Prompt bearbeiten" : "Prompt erstellen";
+    openDialog(D.editorDialog);
+    setTimeout(() => id("editorTitle").focus(), 40);
+  }
+
+  function saveEditor() {
+    const pid = val("editorId");
+    const existing = S.state.prompts.find(p => p.id === pid);
+    const folderId = val("editorFolder") || currentFolderForNew();
+    const body = val("editorBody");
+    const data = {
+      id: existing?.id || uniqueId(slug(val("editorTitle") || "prompt")),
+      title: clean(val("editorTitle") || "Unbenannter Prompt", 180),
+      description: clean(val("editorDescription"), 500),
+      folderId,
+      body: clean(body, 1600000),
+      kind: val("editorKind") || classify(val("editorTitle"), body),
+      accent: val("editorAccent") || "blue",
+      favorite: checked("editorFavorite"),
+      appendSchaeferCt: checked("editorCt"),
+      appendSchaeferMrt: checked("editorMrt"),
+      order: existing?.order ?? nextOrder(folderId),
+      createdAt: existing?.createdAt || now(),
+      updatedAt: now(),
+      lastUsedAt: existing?.lastUsedAt || ""
+    };
+    const p = normalizePrompt(data, folderId);
+    const i = S.state.prompts.findIndex(x => x.id === p.id);
+    if (i >= 0) S.state.prompts[i] = p;
+    else S.state.prompts.push(p);
+    if (p.favorite && !S.state.favorites.includes(p.id)) S.state.favorites.push(p.id);
+    if (!p.favorite) S.state.favorites = S.state.favorites.filter(x => x !== p.id);
+    S.selectedId = p.id;
+    closeTopDialog();
+    markDirty("Prompt gespeichert");
+    render();
+    toast("Gespeichert", p.title, "success");
+  }
+
+  function duplicatePrompt(pid) {
+    const p = S.state.prompts.find(x => x.id === pid);
+    if (!p) return;
+    const copy = normalizePrompt({ ...p, id: uniqueId(`${p.id}-kopie`), title: `${p.title} Kopie`, favorite: false, order: nextOrder(p.folderId), createdAt: now(), updatedAt: now(), lastUsedAt: "" }, p.folderId);
+    S.state.prompts.push(copy);
+    S.selectedId = copy.id;
+    markDirty("Dupliziert");
+    render();
+  }
+
+  function deletePrompt(pid) {
+    const p = S.state.prompts.find(x => x.id === pid);
+    if (!p) return;
+    if (!confirm(`Prompt löschen?\n\n${p.title}`)) return;
+    S.state.prompts = S.state.prompts.filter(x => x.id !== pid);
+    S.state.favorites = S.state.favorites.filter(x => x !== pid);
+    delete S.placeholders[pid];
+    writeJson(APP.storage.placeholders, S.placeholders);
+    S.selectedId = "";
+    markDirty("Gelöscht");
+    render();
+  }
+
+  function openSeed() {
+    openDialog(D.seedDialog);
+    seedPreview();
+  }
+
+  async function seedPreview() {
+    D.seedPreview.textContent = "Vorschau läuft…";
+    try {
+      const res = await fetch(`${APP.api.seed}?text=0`, { cache: "no-store" });
+      D.seedPreview.textContent = JSON.stringify(await res.json(), null, 2);
+    } catch (err) {
+      D.seedPreview.textContent = `Server-Vorschau nicht erreichbar. Client-Fallback verfügbar.\n${err.message || err}`;
+    }
+  }
+
+  async function runSeed() {
+    const form = new FormData(D.seedForm);
+    const opts = ["prompts", "schaeferCt", "schaeferMrt", "replace", "favoriteFirst"].reduce((a, k) => ({ ...a, [k]: form.has(k) }), {});
+    setStatus("seed", "Import");
+    try {
+      const res = await fetch(APP.api.seed, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(opts) });
+      if (!res.ok) throw new Error(`Seed ${res.status}`);
+      const json = await res.json();
+      S.state = normalizeState(json.state || json);
+      S.remoteHash = json.summary?.hash || S.state.meta.hash || "";
+      S.dirty = false;
+      writeJson(APP.storage.state, S.state);
+      closeTopDialog();
+      setStatus("ok", "Sync");
+      render();
+      toast("Startset geladen", "KV wurde aktualisiert.", "success");
+    } catch {
+      await seedClient(opts);
+    }
+  }
+
+  async function seedClient(opts) {
+    try {
+      const next = opts.replace ? emptyState() : normalizeState(S.state);
+      if (opts.prompts) {
+        const text = await fetchText(APP.data.prompts);
+        next.prompts = opts.replace ? [] : next.prompts;
+        mergePrompts(next, parsePromptFile(text));
+      }
+      if (opts.schaeferCt) next.documents.schaeferCt = { title: "# Befundbeispiele Prof. Schäfer CT.txt", text: await fetchText(APP.data.ct), updatedAt: now() };
+      if (opts.schaeferMrt) next.documents.schaeferMrt = { title: "# Befundbeispiele Prof. Schäfer MRT.txt", text: await fetchText(APP.data.mrt), updatedAt: now() };
+      if (opts.favoriteFirst && !next.favorites.length) next.favorites = next.prompts.slice(0, 4).map(p => p.id);
+      S.state = normalizeState(next);
+      closeTopDialog();
+      markDirty("Lokal importiert");
+      render();
+      toast("Lokal importiert", "Server-Import war nicht erreichbar, der Client-Fallback wurde genutzt.", "warning");
+    } catch (err) {
+      setStatus("error", "Fehler");
+      toast("Import fehlgeschlagen", err.message || "Seed-Dateien nicht lesbar.", "error");
+    }
+  }
+
+  async function fetchText(path) {
+    const res = await fetch(path, { cache: "no-store" });
+    if (!res.ok) throw new Error(`${path}: ${res.status}`);
+    return res.text();
+  }
+
+  function parsePromptFile(text) {
+    const src = String(text || "").replace(/\r\n?/g, "\n");
+    const matches = [...src.matchAll(/^\/\/\s*(.+?):\s*$/gm)];
+    const list = [];
+    for (let i = 0; i < matches.length; i++) {
+      const title = clean(matches[i][1], 180);
+      const start = matches[i].index + matches[i][0].length;
+      const end = i + 1 < matches.length ? matches[i + 1].index : src.length;
+      const body = clean(src.slice(start, end), 1600000);
+      if (!title || !body) continue;
+      const kind = classify(title, body);
+      const folderId = folderForPrompt(title, body, kind);
+      list.push(normalizePrompt({ id: uniqueId(slug(title)), title, description: `${placeholders(body).length} Platzhalter`, folderId, body, kind, accent: accentFor(title, kind), favorite: list.length < 4, appendSchaeferCt: kind === "schaefer", appendSchaeferMrt: kind === "schaefer", order: list.length, createdAt: now(), updatedAt: now(), lastUsedAt: "" }, folderId));
+    }
+    return list;
+  }
+
+  function mergePrompts(state, prompts) {
+    const byTitle = new Map(state.prompts.map(p => [norm(p.title), p]));
+    for (const p of prompts) {
+      const old = byTitle.get(norm(p.title));
+      if (old) Object.assign(old, p, { id: old.id, updatedAt: now() });
+      else state.prompts.push(p);
+    }
+    state.favorites = unique([...state.favorites, ...state.prompts.filter(p => p.favorite).map(p => p.id)]).filter(id => state.prompts.some(p => p.id === id));
+  }
+
+  async function openHealth() {
+    openDialog(D.healthDialog);
+    D.healthOutput.textContent = "Diagnostik läuft…";
+    try {
+      const res = await fetch(APP.api.health, { cache: "no-store" });
+      D.healthOutput.textContent = JSON.stringify(await res.json(), null, 2);
+    } catch (err) {
+      D.healthOutput.textContent = err.stack || err.message || String(err);
+    }
+  }
+
+  async function downloadExport(format) {
+    try {
+      const res = await fetch(`${APP.api.export}?format=${encodeURIComponent(format)}&download=1`, { cache: "no-store" });
+      const text = res.ok ? await res.text() : localExport(format);
+      const ext = format === "json" ? "json" : "txt";
+      download(text, `radprompt-${format}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`);
+    } catch {
+      download(localExport(format), `radprompt-${format}.txt`);
+    }
+  }
+
+  async function copyExport(format) {
+    await clipboard(localExport(format));
+    toast("Export kopiert", format, "success");
+  }
+
+  function localExport(format) {
+    if (format === "json") return JSON.stringify({ ok: true, exportedAt: now(), state: S.state }, null, 2);
+    if (format === "schaefer-ct") return S.state.documents.schaeferCt.text || "";
+    if (format === "schaefer-mrt") return S.state.documents.schaeferMrt.text || "";
+    const lines = ["RadPrompt Export", ""];
+    for (const f of folders()) {
+      const ps = S.state.prompts.filter(p => p.folderId === f.id).sort((a, b) => a.order - b.order);
+      if (!ps.length) continue;
+      lines.push(`# ${f.name}`, "");
+      for (const p of ps) lines.push(`// ${p.title}:`, "", p.body.trim(), "", "-".repeat(88), "");
+    }
+    if (format === "fulltxt") {
+      if (S.state.documents.schaeferCt.text) lines.push("# Befundbeispiele Prof. Schäfer CT", "", S.state.documents.schaeferCt.text.trim(), "");
+      if (S.state.documents.schaeferMrt.text) lines.push("# Befundbeispiele Prof. Schäfer MRT", "", S.state.documents.schaeferMrt.text.trim(), "");
+    }
+    return lines.join("\n").trim() + "\n";
+  }
+
+  function download(text, filename) {
+    const blob = new Blob([text], { type: filename.endsWith(".json") ? "application/json;charset=utf-8" : "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.className = "download-proxy";
+    a.href = url;
+    a.download = filename.replace(/[\\/:*?"<>|]+/g, "-");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function initSortable() {
+    if (!window.Sortable || !D.grid) return;
+    S.sortable = new Sortable(D.grid, { animation: 180, draggable: ".tile", dataIdAttr: "data-id", ghostClass: "sortable-ghost", chosenClass: "sortable-chosen", onEnd: applyOrder });
+    syncSortable();
+  }
+
+  function syncSortable() {
+    if (!S.sortable) return;
+    S.sortable.option("disabled", Boolean(S.query) || (S.state.settings.sort || "manual") !== "manual");
+  }
+
+  function applyOrder() {
+    const ids = [...D.grid.querySelectorAll(".tile")].map(el => el.dataset.id);
+    const selected = S.state.settings.selected || "all";
+    if (selected === "favorites") S.state.favorites = unique([...ids, ...S.state.favorites.filter(id => !ids.includes(id))]);
+    else {
+      const rank = new Map(ids.map((id, i) => [id, i]));
+      for (const p of S.state.prompts) if (rank.has(p.id)) p.order = rank.get(p.id);
+    }
+    markDirty("Sortiert");
+    render();
+  }
+
+  function markDirty(label = "Geändert", delay = APP.saveDelay) {
+    S.state.updatedAt = now();
+    S.state.version = Math.max(1, Number(S.state.version || 0) + 1);
+    S.dirty = true;
+    writeJson(APP.storage.state, S.state);
+    setStatus("dirty", label);
+    saveSoon(delay);
+  }
+
+  function saveSoon(delay = APP.saveDelay) {
+    clearTimeout(S.saveTimer);
+    S.saveTimer = setTimeout(() => saveNow(false), delay);
+  }
+
+  async function saveNow(user) {
+    if (!S.dirty && !user) return;
+    if (S.saving) {
+      S.saveQueued = true;
+      return;
+    }
+    const elapsed = Date.now() - S.saveLast;
+    if (elapsed < APP.saveFloor && !user) return saveSoon(APP.saveFloor - elapsed + 80);
+    S.saving = true;
+    S.saveLast = Date.now();
+    setStatus("saving", "Speichert");
+    try {
+      const body = { state: S.state };
+      if (S.remoteHash) body.expectedHash = S.remoteHash;
+      let res = await fetch(APP.api.state, { method: "PUT", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
+      if (res.status === 409) res = await fetch(APP.api.state, { method: "PUT", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ state: S.state }) });
+      if (!res.ok) throw new Error(`State ${res.status}`);
+      const json = await res.json();
+      S.state = normalizeState(json.state || S.state);
+      S.remoteHash = json.summary?.hash || S.state.meta.hash || S.remoteHash;
+      S.dirty = false;
+      S.localOnly = false;
+      writeJson(APP.storage.state, S.state);
+      setStatus("ok", "Sync");
+      if (user) toast("Gespeichert", "Cloudflare KV wurde aktualisiert.", "success");
+    } catch {
+      S.localOnly = true;
+      setStatus("local", "Lokal");
+      writeJson(APP.storage.state, S.state);
+      if (user) toast("Nur lokal gespeichert", "KV ist nicht erreichbar.", "warning");
+    } finally {
+      S.saving = false;
+      if (S.saveQueued) {
+        S.saveQueued = false;
+        saveSoon(APP.saveDelay);
+      }
+      renderMetrics();
+    }
+  }
+
+  function handleLaunch() {
+    const u = new URL(location.href);
+    const action = u.searchParams.get("action") || "";
+    const title = u.searchParams.get("title") || "";
+    const textValue = u.searchParams.get("text") || "";
+    const sharedUrl = u.searchParams.get("url") || "";
+    if (title || textValue || sharedUrl) {
+      openEditor(null);
+      val("editorTitle", title || "Geteilter Prompt");
+      val("editorBody", [textValue, sharedUrl].filter(Boolean).join("\n\n"));
+      return;
+    }
+    if (action === "new-prompt") openEditor(null);
+    if (action === "import") openSeed();
+    if (action === "diagnostics") openHealth();
+    if (action === "export") openDialog(D.exportDialog);
+  }
+
+  function currentPrompt() { return S.state.prompts.find(p => p.id === S.selectedId) || null; }
+  function folders() { return [...S.state.folders].sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || a.name.localeCompare(b.name, "de", { sensitivity: "base" })); }
+  function isFav(pid) { return S.state.favorites.includes(pid); }
+  function placeholders(text) { return unique([...String(text || "").matchAll(/\*\*\*([^*]+?)\*\*\*/g)].map(m => clean(m[1], 140))); }
+  function getPlaceholder(pid, name) { return S.placeholders?.[pid]?.[name] || ""; }
+  function setPlaceholder(pid, name, value) { if (!S.placeholders[pid]) S.placeholders[pid] = {}; S.placeholders[pid][name] = String(value || ""); }
+  function bytes(text) { return new TextEncoder().encode(String(text || "")).length; }
+  function unique(list) { return [...new Set((list || []).filter(Boolean))]; }
+  function now() { return new Date().toISOString(); }
+  function id(x) { return document.getElementById(x); }
+  function html(x) { return String(x ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[c])); }
+  function esc(x) { return html(x).replace(/`/g, "&#096;"); }
+  function text(el, value) { if (el) el.textContent = value ?? ""; }
+  function val(idValue, value) { const el = id(idValue); if (!el) return ""; if (arguments.length > 1) el.value = value ?? ""; return el.value; }
+  function check(idValue, value) { const el = id(idValue); if (el) el.checked = Boolean(value); }
+  function checked(idValue) { return Boolean(id(idValue)?.checked); }
   function clean(value, max = 1000000) { return String(value ?? "").normalize("NFKC").replace(/\r\n?/g, "\n").trim().slice(0, max); }
-  function normalizeSearch(value) { return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").toLowerCase(); }
-  function normalizeKey(value) { return normalizeSearch(value).replace(/[^a-z0-9]+/g, ""); }
-  function unique(list) { return [...new Set((Array.isArray(list) ? list : []).filter(item => item !== undefined && item !== null && String(item) !== ""))]; }
-  function validDate(value) { if (!value) return ""; const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toISOString() : ""; }
-  function byId(id) { return document.getElementById(id); }
-  function setText(el, value) { if (el) el.textContent = String(value ?? ""); }
-  function val(id) { return byId(id)?.value || ""; }
-  function setVal(id, value) { const el = byId(id); if (el) el.value = value ?? ""; }
-  function checked(id) { return Boolean(byId(id)?.checked); }
-  function setChecked(id, value) { const el = byId(id); if (el) el.checked = Boolean(value); }
-  function html(value) { return String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" })[c]); }
-  function esc(value) { return html(value).replace(/`/g, "&#096;"); }
-  function formatDateTime(value) { const date = value ? new Date(value) : null; return date && Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" }).format(date) : "—"; }
-  function bytes(value) { return new TextEncoder().encode(String(value || "")).length; }
-  function parseBool(value, fallback = false) { if (typeof value === "boolean") return value; if (value === undefined || value === null || value === "") return fallback; return ["1", "true", "yes", "ja", "on"].includes(String(value).toLowerCase()); }
-  function readJsonStorage(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } }
-  function writeJsonStorage(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
-  function clone(value) { if (typeof structuredClone === "function") { try { return structuredClone(value); } catch {} } return JSON.parse(JSON.stringify(value)); }
-  function refreshIcons() { if (window.lucide?.createIcons) { try { window.lucide.createIcons(); } catch {} } }
-  function showFatal(error) { console.error(error); document.body.innerHTML = `<main class="app-fatal" role="alert"><section class="app-fatal__card"><h1>RadPrompt konnte nicht gestartet werden</h1><p>${html(error?.message || "Unbekannter Initialisierungsfehler")}</p><button id="fatalReload" type="button">Neu laden</button></section></main>`; byId("fatalReload")?.addEventListener("click", () => location.reload()); }
+  function norm(value) { return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss").toLowerCase(); }
+  function slug(value) { return norm(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90); }
+  function uniqueId(root) { const base = slug(root) || "prompt"; const ids = new Set(S.state.prompts.map(p => p.id)); if (!ids.has(base)) return base; let i = 2; while (ids.has(`${base}-${i}`)) i++; return `${base}-${i}`; }
+  function fmtDate(value) { const d = new Date(value); return Number.isFinite(d.getTime()) ? new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" }).format(d) : "–"; }
+  function shortDate(value) { const d = new Date(value); return Number.isFinite(d.getTime()) ? new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" }).format(d) : "–"; }
+  function iconForKind(kind) { return kind === "schaefer" ? "stethoscope" : kind === "special" ? "braces" : "file-text"; }
+  function kindLabel(kind) { return kind === "schaefer" ? "Schäfer" : kind === "special" ? "Felder" : "Prompt"; }
+  function classify(title, body) { const h = norm(`${title} ${body}`); if (h.includes("prof schafer") || h.includes("prof schaefer") || h.includes("befundstil")) return "schaefer"; if (placeholders(body).length) return "special"; return "standard"; }
+  function folderForPrompt(title, body, kind) { const h = norm(`${title} ${body}`); if (kind === "schaefer") return "prof-schaefer"; if (h.includes("protokoll") || h.includes("ubersicht") || h.includes("staging")) return "wissen"; if (h.includes("befund") || h.includes("bildinterpretation") || h.includes("radiologisch")) return "befundung"; return "allgemein"; }
+  function accentFor(title, kind) { const h = norm(`${title} ${kind}`); if (kind === "schaefer") return "violet"; if (h.includes("revision")) return "amber"; if (h.includes("staging")) return "red"; if (h.includes("protokoll")) return "cyan"; if (h.includes("ubersicht")) return "emerald"; return "blue"; }
+  function currentFolderForNew() { const s = S.state.settings.selected; return s && s !== "all" && s !== "favorites" ? s : S.state.folders[0]?.id || "allgemein"; }
+  function nextOrder(folderId) { const list = S.state.prompts.filter(p => p.folderId === folderId); return list.length ? Math.max(...list.map(p => Number(p.order || 0))) + 1 : 0; }
+
+  function normalizeState(input) {
+    const raw = input && typeof input === "object" ? input : {};
+    const base = emptyState();
+    const foldersRaw = Array.isArray(raw.folders) && raw.folders.length ? raw.folders : base.folders;
+    const folders = foldersRaw.map((f, i) => ({ id: slug(f.id || f.name || `folder-${i}`), name: clean(f.name || "Ordner", 180), icon: clean(f.icon || "folder", 80), order: Number.isFinite(Number(f.order)) ? Number(f.order) : i, createdAt: f.createdAt || now(), updatedAt: f.updatedAt || now() })).filter(f => f.id && f.name);
+    const folderIds = new Set(folders.map(f => f.id));
+    const fallback = folders[0]?.id || "allgemein";
+    const prompts = Array.isArray(raw.prompts) ? raw.prompts.map((p, i) => normalizePrompt(p, fallback, i)).filter(p => p.id && p.title) : [];
+    for (const p of prompts) if (!folderIds.has(p.folderId)) p.folderId = fallback;
+    const promptIds = new Set(prompts.map(p => p.id));
+    const favorites = unique([...(Array.isArray(raw.favorites) ? raw.favorites : []), ...prompts.filter(p => p.favorite).map(p => p.id)]).filter(x => promptIds.has(x));
+    return { schema: APP.schema, version: Math.max(0, Number(raw.version || 0)), updatedAt: raw.updatedAt || now(), folders, prompts, favorites, documents: { schaeferCt: doc(raw.documents?.schaeferCt, "# Befundbeispiele Prof. Schäfer CT.txt"), schaeferMrt: doc(raw.documents?.schaeferMrt, "# Befundbeispiele Prof. Schäfer MRT.txt") }, settings: { ...defaults.settings, ...(raw.settings || {}) }, meta: { seededAt: "", source: "", hash: "", ...(raw.meta || {}) } };
+  }
+
+  function normalizePrompt(p, fallback, order = 0) { const body = clean(p?.body || "", 1600000); const title = clean(p?.title || "Unbenannter Prompt", 180); const kind = clean(p?.kind || classify(title, body), 60); return { id: slug(p?.id || title) || `prompt-${order}`, title, description: clean(p?.description || "", 500), folderId: slug(p?.folderId || fallback), body, kind, accent: clean(p?.accent || accentFor(title, kind), 30), favorite: Boolean(p?.favorite), appendSchaeferCt: Boolean(p?.appendSchaeferCt), appendSchaeferMrt: Boolean(p?.appendSchaeferMrt), order: Number.isFinite(Number(p?.order)) ? Number(p.order) : order, createdAt: p?.createdAt || now(), updatedAt: p?.updatedAt || now(), lastUsedAt: p?.lastUsedAt || "" }; }
+  function doc(d, title) { return { title: clean(d?.title || title, 240), text: clean(d?.text || "", 6000000), updatedAt: d?.updatedAt || "" }; }
+  function emptyState() { const t = now(); return { schema: APP.schema, version: 0, updatedAt: t, folders: defaults.folders.map(f => ({ ...f, createdAt: t, updatedAt: t })), prompts: [], favorites: [], documents: { schaeferCt: { title: "# Befundbeispiele Prof. Schäfer CT.txt", text: "", updatedAt: "" }, schaeferMrt: { title: "# Befundbeispiele Prof. Schäfer MRT.txt", text: "", updatedAt: "" } }, settings: { ...defaults.settings }, meta: { seededAt: "", source: "", hash: "" } }; }
+
+  function renderFolderOptions() { const opts = folders().map(f => `<option value="${esc(f.id)}">${html(f.name)}</option>`).join(""); const el = id("editorFolder"); if (el) el.innerHTML = opts; }
+  function fillEditorFolders() { renderFolderOptions(); }
+  function openDialog(d) { if (!d) return; if (typeof d.showModal === "function") d.showModal(); else d.hidden = false; icons(); }
+  function closeTopDialog() { const ds = [...document.querySelectorAll("dialog[open]")]; const d = ds.at(-1); if (d) d.close(); }
+  function toggleCompact() { S.state.settings.compact = !S.state.settings.compact; saveUi(); applyUi(); }
+  function applyUi() { document.documentElement.classList.toggle("is-compact", Boolean(S.state.settings.compact)); }
+  function loadLocalUi() { const ui = readJson(APP.storage.ui, {}); if (ui && typeof ui === "object") S.state.settings = { ...S.state.settings, ...ui }; }
+  function saveUi() { writeJson(APP.storage.ui, { selected: S.state.settings.selected, sort: S.state.settings.sort, compact: S.state.settings.compact }); }
+  function setStatus(state, label) { D.status.dataset.state = state; D.status.textContent = label; }
+  function readJson(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } }
+  function writeJson(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+  function icons() { if (window.lucide?.createIcons) window.lucide.createIcons(); }
+  function toast(title, message = "", type = "info") { const n = document.createElement("article"); n.className = `toast toast--${type}`; n.innerHTML = `<i data-lucide="${type === "success" ? "check-circle-2" : type === "warning" ? "alert-triangle" : type === "error" ? "x-circle" : "info"}"></i><div><strong>${html(title)}</strong>${message ? `<p>${html(message)}</p>` : ""}</div><button type="button" aria-label="Schließen"><i data-lucide="x"></i></button>`; n.querySelector("button").addEventListener("click", () => n.remove()); D.toastStack.appendChild(n); icons(); setTimeout(() => n.remove(), APP.toastMs); }
+  function fatal(error) { document.body.innerHTML = `<main class="fatal"><section class="fatal__card"><h1>RadPrompt konnte nicht starten</h1><p>${html(error?.message || error || "Unbekannter Fehler")}</p><button class="primary-btn" type="button" id="reloadFatal">Neu laden</button></section></main>`; id("reloadFatal")?.addEventListener("click", () => location.reload()); }
 })();

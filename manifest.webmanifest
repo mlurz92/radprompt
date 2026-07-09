@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "RadPrompt",
+  "name": "RadPrompt Deck",
   "short_name": "RadPrompt",
-  "description": "Kompaktes radiologisches Prompt-Board für Windows 11 mit Cloudflare-KV-Synchronisierung, Ordnern, Favoriten, Platzhaltern und Prof.-Schäfer-Anhangslogik.",
+  "description": "Sidebar-freies radiologisches Prompt-Deck mit kompakter Kachelmatrix, animiertem Detailpanel, Cloudflare-KV-Sync und Prof.-Schäfer-Anhangslogik.",
   "lang": "de-DE",
   "dir": "ltr",
   "start_url": "/?source=pwa",
@@ -10,8 +10,8 @@
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#050609",
-  "theme_color": "#07080b",
+  "background_color": "#05070c",
+  "theme_color": "#080b12",
   "categories": ["productivity", "utilities"],
   "prefer_related_applications": false,
   "icons": [
@@ -19,10 +19,10 @@
     { "src": "/icons/radprompt-maskable.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Prompt erstellen", "short_name": "Neuer Prompt", "description": "RadPrompt öffnen und direkt einen neuen Prompt anlegen.", "url": "/?action=new-prompt", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] },
-    { "name": "Startset laden", "short_name": "Import", "description": "RadPrompt öffnen und die statischen Seed-Dateien importieren.", "url": "/?action=import", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] },
-    { "name": "KV-Diagnostik", "short_name": "Diagnostik", "description": "RadPrompt öffnen und den Cloudflare-KV-Status prüfen.", "url": "/?action=diagnostics", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] },
-    { "name": "Export öffnen", "short_name": "Export", "description": "RadPrompt öffnen und den Exportdialog anzeigen.", "url": "/?action=export", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] }
+    { "name": "Prompt erstellen", "short_name": "Neu", "description": "RadPrompt öffnen und einen neuen Prompt anlegen.", "url": "/?action=new-prompt", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] },
+    { "name": "Startset laden", "short_name": "Import", "description": "Seed-Import öffnen.", "url": "/?action=import", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] },
+    { "name": "Diagnostik", "short_name": "Health", "description": "KV- und Runtime-Diagnostik öffnen.", "url": "/?action=diagnostics", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] },
+    { "name": "Export", "short_name": "Export", "description": "Exportdialog öffnen.", "url": "/?action=export", "icons": [{ "src": "/icons/radprompt-icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }] }
   ],
   "share_target": {
     "action": "/?action=new-prompt",

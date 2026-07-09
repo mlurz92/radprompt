@@ -1,35 +1,24 @@
-# RadPrompt
+# RadPrompt Deck
 
-RadPrompt ist eine build-freie Cloudflare-Pages-Anwendung für Windows-11-orientiertes Arbeiten mit radiologischen KI-Prompt-Templates.
+RadPrompt Deck ist eine neu aufgebaute, sidebar-freie Cloudflare-Pages-Anwendung für radiologische KI-Prompt-Templates.
 
-Die Anwendung stellt ein kompaktes, dunkles Schnellzugriffsboard bereit, das neben Browser, RIS, PACS oder Befundungsumgebung positioniert werden kann. Prompt-Templates werden per Klick in die Zwischenablage kopiert, in Ordner sortiert, als Favoriten markiert und über Cloudflare Workers KV synchronisiert.
+Die Anwendung ersetzt die alte Seitenleisten-Architektur durch ein fokussiertes Deck-Konzept:
 
-## Produktivziel
+- keine linke Sidebar
+- horizontale Filterleiste
+- kompakte Prompt-Kacheln
+- Kacheln zeigen nur Überschrift, Favoritenstatus und Zusatz-Badges
+- Prompt-Volltext erscheint erst nach Auswahl
+- Auswahl öffnet ein animiertes Detailpanel
+- auch bei schmaler Viewportbreite bleiben mindestens drei Kacheln nebeneinander sichtbar
+- Cloudflare Workers KV bleibt der zentrale Sync-Speicher
+- Seed-Import, Export, Healthcheck und PWA-Funktionen bleiben enthalten
+
+## Zielhost
 
 ```text
 https://radprompt.pages.dev
 ```
-
-## Kernfunktionen
-
-- Cloudflare Pages ohne Build-Schritt
-- Pages Functions unter `functions/`
-- KV-Binding `RADPROMPT_KV`
-- KV-Namespace-ID `9e6bc961684e4b928ef276bd2ff1adb2`
-- 4-spaltiges Prompt-Grid
-- Ordnerverwaltung
-- Drag-and-Drop-Sortierung
-- Favoriten-Bar
-- Prompt-Editor
-- Platzhalter im Format `***PLATZHALTER***`
-- Dropdown für `***Modalität***` mit `CT`, `MRT`, `Röntgen`, `CT&MRT`
-- Prof.-Schäfer-Anhangslogik für CT und MRT
-- Seed-Import aus statischen TXT-Dateien
-- JSON-/TXT-Export
-- KV-/Runtime-Diagnostik
-- lokaler `localStorage`-Fallback
-- PWA-Manifest mit SVG-Icons
-- CSP-kompatibler Clipboard-Fallback
 
 ## Projektstruktur
 
@@ -59,7 +48,52 @@ radprompt/
         └── export.js
 ```
 
-## Cloudflare Pages Setup
+## Designsystem
+
+### Layout
+
+- Topbar mit Marke, Suche, Status und Aktionen
+- Hero-Bereich mit kurzer Erklärung und Metriken
+- horizontale Filter-Chips für alle Ordner
+- Prompt-Deck als Grid
+- Detailpanel rechts auf breiten Viewports
+- Detailpanel als animierter Bottom-Sheet auf schmaleren Viewports
+
+### Kachelprinzip
+
+Eine Kachel zeigt nur:
+
+- Prompt-Titel
+- Favoritenstatus
+- Prompt-Typ
+- Platzhalteranzahl
+- CT-/MRT-Anhangsindikatoren
+- Ordnername
+- Aktualisierungsdatum
+
+Der Prompttext wird nicht in den Kacheln angezeigt.
+
+### Detailprinzip
+
+Nach Auswahl einer Kachel zeigt das Detailpanel:
+
+- Ordner
+- Titel
+- Platzhalterfelder
+- vollständigen Prompttext
+- Kopieren
+- Bearbeiten
+- Duplizieren
+- Löschen
+- Favorit-Umschaltung
+
+### Responsivität
+
+Das Deck ist so gestaltet, dass auch bei schmaler Viewportbreite mindestens drei Kacheln nebeneinander sichtbar bleiben. Die Kacheln reduzieren dafür Abstände, Badge-Größen, Typografie und Höhe.
+
+## Cloudflare Pages
+
+Empfohlene Einstellungen:
 
 | Einstellung | Wert |
 |---|---|
@@ -67,11 +101,12 @@ radprompt/
 | Build command | leer |
 | Build output directory | `.` |
 | Functions directory | `functions/` |
-| KV binding | `RADPROMPT_KV` |
+| KV Binding | `RADPROMPT_KV` |
+| KV Namespace ID | `9e6bc961684e4b928ef276bd2ff1adb2` |
 
-## KV-Binding
+## KV Binding
 
-Im Cloudflare Dashboard unter `Workers & Pages` → Pages-Projekt → `Settings` → `Bindings` einen KV Namespace mit folgendem Binding-Namen setzen:
+RadPrompt erwartet exakt:
 
 ```text
 RADPROMPT_KV
@@ -83,10 +118,22 @@ Namespace-ID:
 9e6bc961684e4b928ef276bd2ff1adb2
 ```
 
+State-Key:
+
+```text
+radprompt:state:v1
+```
+
 ## Lokaler Test
 
 ```bash
 npx wrangler pages dev .
+```
+
+Mit Datum:
+
+```bash
+npx wrangler pages dev . --compatibility-date=2026-07-09
 ```
 
 ## Deployment
@@ -95,67 +142,144 @@ npx wrangler pages dev .
 npx wrangler pages deploy . --project-name=radprompt
 ```
 
-## Endpunkte
+Oder per GitHub-Integration in Cloudflare Pages.
 
-| Endpoint | Methoden | Zweck |
-|---|---|---|
+## API
+
+| Endpoint | Methode | Zweck |
+|---|---:|---|
 | `/api/health` | `GET`, `HEAD` | Runtime- und KV-Diagnostik |
-| `/api/state` | `GET`, `HEAD`, `PUT`, `POST`, `PATCH`, `DELETE` | synchronisierter App-State |
-| `/api/seed` | `GET`, `HEAD`, `POST` | Seed-Vorschau und Import |
-| `/api/export` | `GET`, `HEAD` | Export als JSON, State, Manifest oder TXT |
+| `/api/state` | `GET`, `HEAD` | State laden |
+| `/api/state` | `PUT`, `POST` | State speichern |
+| `/api/state` | `PATCH` | State mergen |
+| `/api/state?confirm=delete` | `DELETE` | State löschen |
+| `/api/seed` | `GET`, `HEAD` | Seed-Vorschau |
+| `/api/seed` | `POST` | Seed importieren |
+| `/api/export?format=json` | `GET`, `HEAD` | JSON-Export |
+| `/api/export?format=prompts` | `GET`, `HEAD` | Prompt-TXT |
+| `/api/export?format=fulltxt` | `GET`, `HEAD` | Volltext-TXT |
+| `/api/export?format=schaefer-ct` | `GET`, `HEAD` | CT-Beispiele |
+| `/api/export?format=schaefer-mrt` | `GET`, `HEAD` | MRT-Beispiele |
 
-## Initialisierung
+## Bedienung
 
-Nach Deployment:
+### Startset laden
 
-1. `https://radprompt.pages.dev` öffnen
-2. Diagnostik ausführen
-3. Startset laden
-4. Prompts prüfen
-5. Favoriten anpassen
-6. Speichern prüfen
+1. App öffnen
+2. Datenbank-Icon anklicken
+3. Importoptionen prüfen
+4. Importieren
 
-Alternativ:
+### Prompt kopieren
 
-```bash
-curl -X POST "https://radprompt.pages.dev/api/seed" \
-  -H "Content-Type: application/json" \
-  --data '{"prompts":true,"schaeferCt":true,"schaeferMrt":true,"replace":true,"favoriteFirst":true}'
+1. Kachel auswählen
+2. Platzhalter im Detailpanel ausfüllen
+3. Kopieren anklicken
+
+### Prompt bearbeiten
+
+1. Kachel auswählen
+2. Bearbeiten anklicken
+3. Felder anpassen
+4. Speichern
+
+### Prompt sortieren
+
+- Sortierung auf `Manuell` stellen
+- Kacheln im Grid per Drag-and-Drop bewegen
+
+### Suchfilter
+
+- Suche in der Topbar verwenden
+- Filterchips für Ordner oder Favoriten verwenden
+
+## Platzhalter
+
+Platzhalterformat:
+
+```text
+***Klinische Angaben***
+***Fragestellung***
+***Modalität***
+***THEMA***
 ```
 
-## Exportbeispiele
+Der Platzhalter `***Modalität***` wird als Dropdown dargestellt:
 
-```bash
-curl "https://radprompt.pages.dev/api/export?format=json&download=1" -o radprompt-export.json
-curl "https://radprompt.pages.dev/api/export?format=prompts&download=1" -o radprompt-prompts.txt
-curl "https://radprompt.pages.dev/api/export?format=fulltxt&download=1" -o radprompt-volltext.txt
-curl "https://radprompt.pages.dev/api/export?format=schaefer-ct" -o "Befundbeispiele Prof. Schäfer CT.txt"
+```text
+CT
+MRT
+Röntgen
+CT&MRT
 ```
 
-## Security
+## Prof.-Schäfer-Anhang
 
-Statische Assets erhalten Security Header aus `_headers`. Pages Functions setzen API-Header über `functions/_middleware.js`, da `_headers` nicht auf Function-Antworten angewendet wird.
+Prof.-Schäfer-Prompts hängen beim Kopieren optional an:
 
-Enthalten sind unter anderem CSP, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy, no-store für API/Seed-Dateien und immutable Caching für Icons.
+```text
+data/Befundbeispiele Prof. Schäfer CT.txt
+data/Befundbeispiele Prof. Schäfer MRT.txt
+```
+
+## Sicherheit
+
+Enthalten:
+
+- CSP
+- HSTS
+- X-Frame-Options
+- frame-ancestors none
+- nosniff
+- Referrer-Policy
+- Permissions-Policy
+- Same-Origin API-CORS
+- KV-Backups
+- ETag-/Hash-Konfliktschutz
+- kein globaler SPA-Catch-all
+
+Nicht enthalten:
+
+- Login
+- Rollenmodell
+- Ende-zu-Ende-Verschlüsselung
+- Multiuser-Locking
+- patientenbezogener Audit-Trail
 
 ## Datenschutz
 
-RadPrompt speichert Prompt-Templates, Ordner, Favoriten, UI-Einstellungen und Prof.-Schäfer-Beispieltexte. Platzhalterwerte auf Karten werden lokal im Browser gespeichert. Patientendaten sollen nicht dauerhaft in Prompt-Templates eingetragen werden.
+Automatisch gespeichert werden:
 
-## Qualitätsprüfung
+- Prompttexte
+- Ordner
+- Favoriten
+- UI-Einstellungen
+- Prof.-Schäfer-Dokumenttexte
+- Versionen und Hashwerte
 
-Nach Deployment prüfen:
+Nicht automatisch gespeichert werden:
 
-- Seite lädt ohne Konsolenfehler
-- `/api/health` meldet KV-Binding
-- `/api/seed?text=0` liest Assets
-- Startset-Import funktioniert
-- Prompt-Kopieren funktioniert
-- Prof.-Schäfer-Anhang wird angefügt
-- Drag-and-Drop funktioniert im manuellen Sortiermodus
-- Export funktioniert
-- PWA-Manifest und Icons laden
+- Suchbegriffe
+- ausgefüllte Platzhalterwerte im KV
+- Clipboard-Inhalte
 
-## Betriebsgrenzen
+Platzhalterwerte werden lokal im Browser gespeichert.
 
-Workers KV ist für synchronisierte Konfigurationen geeignet, nicht für transaktionale Echtzeit-Kollaboration. Preview und Production nutzen hier bewusst denselben vorgegebenen KV-Namespace.
+## Prüfcheckliste nach Deployment
+
+- [ ] App lädt ohne Konsolenfehler
+- [ ] keine linke Sidebar sichtbar
+- [ ] mindestens drei Kacheln nebeneinander bei schmalem Viewport
+- [ ] Kacheln zeigen keinen Volltext
+- [ ] Kachelauswahl öffnet animiertes Detailpanel
+- [ ] Prompttext erscheint nur im Detailpanel
+- [ ] Platzhalterfelder erscheinen im Detailpanel
+- [ ] `***Modalität***` ist Dropdown
+- [ ] Kopieren funktioniert
+- [ ] Startset-Import funktioniert
+- [ ] KV-Sync funktioniert
+- [ ] Export funktioniert
+- [ ] Healthcheck funktioniert
+- [ ] PWA-Manifest lädt
+- [ ] SVG-Icons laden
+- [ ] CSP erzeugt keine Blocker
