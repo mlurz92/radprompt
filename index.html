@@ -1,0 +1,515 @@
+﻿<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08090c">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="RadPrompt ist ein kompaktes Windows-11-Schnellzugriffsboard zum Kopieren radiologischer KI-Prompt-Templates.">
+  <meta name="application-name" content="RadPrompt">
+  <title>RadPrompt</title>
+  <link rel="manifest" href="/app.webmanifest">
+  <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link href="/assets/css/radprompt.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js" defer></script>
+  <script src="/assets/js/defaults.js" defer></script>
+  <script src="/assets/js/radprompt.js" defer></script>
+</head>
+<body>
+  <noscript>
+    <section class="rp-noscript">
+      <strong>RadPrompt benötigt JavaScript.</strong>
+      <span>Die Anwendung kopiert Prompt-Templates dynamisch in die Zwischenablage und verwaltet Ordner/Favoriten über Cloudflare KV.</span>
+    </section>
+  </noscript>
+
+  <div id="seedSources" hidden data-prompts-src="/assets/data/prompts.txt" data-prof-ct-src="/assets/data/befundbeispiele-prof-schaefer-ct.txt" data-prof-mrt-src="/assets/data/befundbeispiele-prof-schaefer-mrt.txt"></div>
+
+  <div id="app" class="rp-shell" data-app-state="booting">
+    <div class="rp-ambient" aria-hidden="true">
+      <span class="rp-orb rp-orb-a"></span>
+      <span class="rp-orb rp-orb-b"></span>
+      <span class="rp-orb rp-orb-c"></span>
+      <span class="rp-noise"></span>
+    </div>
+
+    <header class="rp-titlebar glass-panel" data-region="titlebar">
+      <div class="rp-brand">
+        <button class="rp-appmark" type="button" id="appMenuButton" aria-label="RadPrompt-Menü öffnen" aria-haspopup="dialog">
+          <span class="rp-appmark-core">R</span>
+          <span class="rp-appmark-ring"></span>
+        </button>
+        <div class="rp-brand-copy">
+          <div class="rp-brand-row">
+            <h1>RadPrompt</h1>
+            <span class="rp-build-badge">KV · No Build · Win11</span>
+          </div>
+          <p>Radiologisches Prompt-Board für KI-Befundung und Prof.-Schäfer-Stil</p>
+        </div>
+      </div>
+
+      <div class="rp-title-actions">
+        <div class="rp-sync-pill" id="syncPill" data-sync-state="offline" role="status" aria-live="polite">
+          <span class="rp-sync-dot"></span>
+          <span id="syncLabel">Initialisierung</span>
+        </div>
+        <button class="rp-icon-button" type="button" id="openCommandButton" aria-label="Befehlspalette öffnen">
+          <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+        </button>
+        <button class="rp-icon-button" type="button" id="toggleCompactButton" aria-label="Kompaktmodus umschalten">
+          <i class="fa-solid fa-window-restore" aria-hidden="true"></i>
+        </button>
+        <button class="rp-primary-button" type="button" id="newPromptButton">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          <span>Prompt</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="rp-workspace">
+      <aside class="rp-sidebar glass-panel" aria-label="Ordnernavigation">
+        <section class="rp-sidebar-section rp-profile-card">
+          <div class="rp-profile-glow" aria-hidden="true"></div>
+          <div class="rp-profile-main">
+            <span class="rp-profile-kicker">Schnellzugriff</span>
+            <strong>Prompt-Ordner</strong>
+            <small id="librarySummary">Keine Daten geladen</small>
+          </div>
+        </section>
+
+        <section class="rp-sidebar-section">
+          <div class="rp-section-heading">
+            <span>Ordner</span>
+            <button class="rp-mini-button" type="button" id="newFolderButton" aria-label="Ordner hinzufügen">
+              <i class="fa-solid fa-folder-plus" aria-hidden="true"></i>
+            </button>
+          </div>
+          <nav class="rp-folder-list" id="folderList" aria-label="Prompt-Ordner"></nav>
+        </section>
+
+        <section class="rp-sidebar-section">
+          <div class="rp-section-heading">
+            <span>Filter</span>
+            <button class="rp-mini-button" type="button" id="clearFiltersButton" aria-label="Filter zurücksetzen">
+              <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="rp-filter-stack" role="group" aria-label="Prompt-Filter">
+            <button class="rp-filter-chip is-active" type="button" data-filter="all">
+              <i class="fa-solid fa-border-all" aria-hidden="true"></i>
+              <span>Alle</span>
+            </button>
+            <button class="rp-filter-chip" type="button" data-filter="favorites">
+              <i class="fa-solid fa-star" aria-hidden="true"></i>
+              <span>Favoriten</span>
+            </button>
+            <button class="rp-filter-chip" type="button" data-filter="special">
+              <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+              <span>Platzhalter</span>
+            </button>
+            <button class="rp-filter-chip" type="button" data-filter="prof">
+              <i class="fa-solid fa-file-medical" aria-hidden="true"></i>
+              <span>Schäfer</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="rp-sidebar-section rp-storage-card">
+          <div class="rp-section-heading">
+            <span>Speicher</span>
+            <i class="fa-solid fa-database" aria-hidden="true"></i>
+          </div>
+          <dl class="rp-metrics">
+            <div>
+              <dt>Prompts</dt>
+              <dd id="metricPrompts">0</dd>
+            </div>
+            <div>
+              <dt>Ordner</dt>
+              <dd id="metricFolders">0</dd>
+            </div>
+            <div>
+              <dt>Favoriten</dt>
+              <dd id="metricFavorites">0</dd>
+            </div>
+          </dl>
+          <button class="rp-secondary-button rp-full-button" type="button" id="forceSyncButton">
+            <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+            <span>Jetzt synchronisieren</span>
+          </button>
+        </section>
+      </aside>
+
+      <section class="rp-main-panel">
+        <section class="rp-hero glass-panel">
+          <div class="rp-hero-copy">
+            <span class="rp-eyebrow">Clipboard-Board</span>
+            <h2 id="currentFolderTitle">Alle Prompts</h2>
+            <p id="currentFolderDescription">Buttons klicken, Platzhalter ausfüllen, Prompt direkt in die Zwischenablage kopieren.</p>
+          </div>
+          <div class="rp-hero-controls">
+            <label class="rp-search" for="searchInput">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              <input id="searchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Prompt suchen…">
+              <kbd>Ctrl</kbd>
+              <kbd>K</kbd>
+            </label>
+            <div class="rp-view-toggle" role="group" aria-label="Ansicht umschalten">
+              <button class="is-active" type="button" data-view="board" aria-label="Board-Ansicht">
+                <i class="fa-solid fa-grip" aria-hidden="true"></i>
+              </button>
+              <button type="button" data-view="dense" aria-label="Dichte Ansicht">
+                <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="rp-favorites glass-panel" aria-labelledby="favoritesTitle">
+          <div class="rp-strip-heading">
+            <div>
+              <span class="rp-eyebrow">Favoriten</span>
+              <h3 id="favoritesTitle">Schnellzugriff</h3>
+            </div>
+            <button class="rp-ghost-button" type="button" id="manageFavoritesButton">
+              <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+              <span>Sortieren</span>
+            </button>
+          </div>
+          <div class="rp-favorite-rail" id="favoriteRail" aria-label="Favoritenleiste"></div>
+        </section>
+
+        <section class="rp-board glass-panel" aria-labelledby="boardTitle">
+          <div class="rp-board-toolbar">
+            <div>
+              <span class="rp-eyebrow">Hauptansicht</span>
+              <h3 id="boardTitle">Prompt-Buttons</h3>
+            </div>
+            <div class="rp-board-actions">
+              <button class="rp-ghost-button" type="button" id="importButton">
+                <i class="fa-solid fa-file-import" aria-hidden="true"></i>
+                <span>Import</span>
+              </button>
+              <button class="rp-ghost-button" type="button" id="exportButton">
+                <i class="fa-solid fa-file-export" aria-hidden="true"></i>
+                <span>Export</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="rp-active-filter-row" id="activeFilterRow" hidden></div>
+
+          <div class="rp-prompt-grid" id="promptGrid" aria-live="polite"></div>
+
+          <section class="rp-empty-state" id="emptyState" hidden>
+            <div class="rp-empty-icon">
+              <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+            </div>
+            <h3>Keine Prompts im aktuellen Filter</h3>
+            <p>Lege einen neuen Prompt an, wähle einen anderen Ordner oder entferne die Suche.</p>
+            <button class="rp-primary-button" type="button" id="emptyNewPromptButton">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Prompt hinzufügen</span>
+            </button>
+          </section>
+        </section>
+      </section>
+
+      <aside class="rp-detail-drawer glass-panel" id="detailDrawer" aria-label="Prompt-Editor" aria-hidden="true">
+        <div class="rp-drawer-header">
+          <div>
+            <span class="rp-eyebrow">Erweitern</span>
+            <h2 id="drawerTitle">Prompt bearbeiten</h2>
+          </div>
+          <button class="rp-icon-button" type="button" id="closeDrawerButton" aria-label="Editor schließen">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <form id="promptEditorForm" class="rp-editor-form">
+          <input type="hidden" id="editorPromptId">
+
+          <label class="rp-field">
+            <span>Name</span>
+            <input id="editorTitle" name="title" type="text" autocomplete="off" required>
+          </label>
+
+          <div class="rp-editor-grid">
+            <label class="rp-field">
+              <span>Ordner</span>
+              <select id="editorFolder" name="folderId" required></select>
+            </label>
+            <label class="rp-field">
+              <span>Akzent</span>
+              <select id="editorTone" name="tone">
+                <option value="graphite">Graphit</option>
+                <option value="steel">Stahl</option>
+                <option value="violet">Violett</option>
+                <option value="cyan">Cyan</option>
+                <option value="emerald">Emerald</option>
+                <option value="amber">Amber</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="rp-switch-row">
+            <label class="rp-switch">
+              <input id="editorFavorite" name="favorite" type="checkbox">
+              <span></span>
+              <strong>Favorit</strong>
+            </label>
+            <label class="rp-switch">
+              <input id="editorProfSchaefer" name="profSchaefer" type="checkbox">
+              <span></span>
+              <strong>Prof.-Schäfer-Zusatz</strong>
+            </label>
+          </div>
+
+          <label class="rp-field rp-textarea-field">
+            <span>Prompttext</span>
+            <textarea id="editorBody" name="body" spellcheck="false" required></textarea>
+          </label>
+
+          <section class="rp-placeholder-panel">
+            <div class="rp-section-heading">
+              <span>Erkannte Platzhalter</span>
+              <button class="rp-mini-button" type="button" id="refreshPlaceholdersButton" aria-label="Platzhalter neu erkennen">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="rp-placeholder-chips" id="editorPlaceholderChips"></div>
+          </section>
+
+          <div class="rp-drawer-actions">
+            <button class="rp-danger-button" type="button" id="deletePromptButton">
+              <i class="fa-solid fa-trash" aria-hidden="true"></i>
+              <span>Löschen</span>
+            </button>
+            <div>
+              <button class="rp-secondary-button" type="button" id="copyFromEditorButton">
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                <span>Kopieren</span>
+              </button>
+              <button class="rp-primary-button" type="submit">
+                <i class="fa-solid fa-check" aria-hidden="true"></i>
+                <span>Speichern</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </aside>
+    </main>
+  </div>
+
+  <dialog class="rp-dialog glass-panel" id="folderDialog" aria-labelledby="folderDialogTitle">
+    <form method="dialog" id="folderForm" class="rp-dialog-form">
+      <div class="rp-dialog-header">
+        <div>
+          <span class="rp-eyebrow">Ordner</span>
+          <h2 id="folderDialogTitle">Ordner anlegen</h2>
+        </div>
+        <button class="rp-icon-button" value="cancel" type="submit" aria-label="Dialog schließen">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <input type="hidden" id="folderIdInput">
+      <label class="rp-field">
+        <span>Name</span>
+        <input id="folderNameInput" type="text" autocomplete="off" required>
+      </label>
+      <label class="rp-field">
+        <span>Beschreibung</span>
+        <input id="folderDescriptionInput" type="text" autocomplete="off">
+      </label>
+      <div class="rp-dialog-actions">
+        <button class="rp-secondary-button" value="cancel" type="submit">Abbrechen</button>
+        <button class="rp-primary-button" value="default" type="submit">
+          <i class="fa-solid fa-folder-plus" aria-hidden="true"></i>
+          <span>Übernehmen</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="rp-dialog glass-panel" id="commandDialog" aria-labelledby="commandDialogTitle">
+    <div class="rp-command-shell">
+      <div class="rp-dialog-header">
+        <div>
+          <span class="rp-eyebrow">Command Center</span>
+          <h2 id="commandDialogTitle">RadPrompt-Menü</h2>
+        </div>
+        <button class="rp-icon-button" type="button" id="closeCommandButton" aria-label="Menü schließen">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <label class="rp-search rp-command-search" for="commandSearchInput">
+        <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+        <input id="commandSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Aktion oder Prompt suchen…">
+      </label>
+
+      <div class="rp-command-list" id="commandList" role="listbox" aria-label="Aktionen"></div>
+    </div>
+  </dialog>
+
+  <dialog class="rp-dialog glass-panel" id="importDialog" aria-labelledby="importDialogTitle">
+    <form method="dialog" id="importForm" class="rp-dialog-form">
+      <div class="rp-dialog-header">
+        <div>
+          <span class="rp-eyebrow">Import</span>
+          <h2 id="importDialogTitle">RadPrompt-Daten importieren</h2>
+        </div>
+        <button class="rp-icon-button" value="cancel" type="submit" aria-label="Dialog schließen">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <label class="rp-field rp-textarea-field">
+        <span>JSON</span>
+        <textarea id="importTextarea" spellcheck="false" placeholder="{&quot;version&quot;:1,&quot;folders&quot;:[],&quot;prompts&quot;:[]}"></textarea>
+      </label>
+      <div class="rp-dialog-actions">
+        <button class="rp-secondary-button" value="cancel" type="submit">Abbrechen</button>
+        <button class="rp-primary-button" value="default" type="submit">
+          <i class="fa-solid fa-file-import" aria-hidden="true"></i>
+          <span>Importieren</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="rp-dialog glass-panel" id="appMenuDialog" aria-labelledby="appMenuTitle">
+    <div class="rp-app-menu">
+      <div class="rp-dialog-header">
+        <div>
+          <span class="rp-eyebrow">RadPrompt</span>
+          <h2 id="appMenuTitle">Systemmenü</h2>
+        </div>
+        <button class="rp-icon-button" type="button" id="closeAppMenuButton" aria-label="Menü schließen">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="rp-menu-grid">
+        <button class="rp-menu-tile" type="button" id="menuSeedButton">
+          <i class="fa-solid fa-seedling" aria-hidden="true"></i>
+          <strong>Startset laden</strong>
+          <span>Prompt-Datei neu einlesen</span>
+        </button>
+        <button class="rp-menu-tile" type="button" id="menuHealthButton">
+          <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+          <strong>KV prüfen</strong>
+          <span>Binding und API testen</span>
+        </button>
+        <button class="rp-menu-tile" type="button" id="menuResetLocalButton">
+          <i class="fa-solid fa-broom" aria-hidden="true"></i>
+          <strong>Lokal leeren</strong>
+          <span>Cache zurücksetzen</span>
+        </button>
+        <button class="rp-menu-tile" type="button" id="menuInstallButton">
+          <i class="fa-brands fa-windows" aria-hidden="true"></i>
+          <strong>Installieren</strong>
+          <span>Als App anheften</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <template id="folderItemTemplate">
+    <button class="rp-folder-item" type="button">
+      <span class="rp-folder-grip" aria-hidden="true">
+        <i class="fa-solid fa-grip-vertical"></i>
+      </span>
+      <span class="rp-folder-icon" aria-hidden="true">
+        <i class="fa-regular fa-folder"></i>
+      </span>
+      <span class="rp-folder-copy">
+        <strong data-folder-title></strong>
+        <small data-folder-meta></small>
+      </span>
+      <span class="rp-folder-count" data-folder-count>0</span>
+    </button>
+  </template>
+
+  <template id="promptCardTemplate">
+    <article class="rp-prompt-card" data-prompt-id="">
+      <div class="rp-card-glare" aria-hidden="true"></div>
+      <div class="rp-card-head">
+        <button class="rp-card-title-button" type="button" data-action="copy">
+          <span class="rp-card-icon" aria-hidden="true">
+            <i class="fa-solid fa-bolt"></i>
+          </span>
+          <span class="rp-card-title-wrap">
+            <strong data-prompt-title></strong>
+            <small data-prompt-meta></small>
+          </span>
+        </button>
+        <div class="rp-card-tools">
+          <button class="rp-mini-button" type="button" data-action="favorite" aria-label="Favorit umschalten">
+            <i class="fa-regular fa-star" aria-hidden="true"></i>
+          </button>
+          <button class="rp-mini-button" type="button" data-action="expand" aria-label="Prompt erweitern">
+            <i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="rp-placeholder-zone" data-placeholder-zone></div>
+      <div class="rp-card-footer">
+        <span class="rp-card-badge" data-prompt-badge></span>
+        <button class="rp-copy-button" type="button" data-action="copy">
+          <i class="fa-solid fa-copy" aria-hidden="true"></i>
+          <span>Kopieren</span>
+        </button>
+      </div>
+    </article>
+  </template>
+
+  <template id="favoriteButtonTemplate">
+    <button class="rp-favorite-button" type="button" data-prompt-id="">
+      <span class="rp-favorite-grip" aria-hidden="true">
+        <i class="fa-solid fa-grip-lines"></i>
+      </span>
+      <span data-favorite-title></span>
+      <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+    </button>
+  </template>
+
+  <template id="placeholderInputTemplate">
+    <label class="rp-placeholder-field">
+      <span data-placeholder-label></span>
+      <input type="text" autocomplete="off" spellcheck="false" data-placeholder-input>
+    </label>
+  </template>
+
+  <template id="placeholderSelectTemplate">
+    <label class="rp-placeholder-field">
+      <span data-placeholder-label></span>
+      <select data-placeholder-input>
+        <option value="">Modalität wählen</option>
+        <option value="CT">CT</option>
+        <option value="MRT">MRT</option>
+        <option value="Röntgen">Röntgen</option>
+        <option value="CT&amp;MRT">CT&amp;MRT</option>
+      </select>
+    </label>
+  </template>
+
+  <template id="commandItemTemplate">
+    <button class="rp-command-item" type="button" role="option">
+      <span class="rp-command-icon" aria-hidden="true">
+        <i class="fa-solid fa-bolt"></i>
+      </span>
+      <span class="rp-command-copy">
+        <strong data-command-title></strong>
+        <small data-command-description></small>
+      </span>
+      <kbd data-command-key></kbd>
+    </button>
+  </template>
+
+  <div class="rp-toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>
