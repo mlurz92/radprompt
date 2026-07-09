@@ -1,0 +1,10 @@
+name = "radprompt"
+compatibility_date = "2026-07-09"
+pages_build_output_dir = "."
+
+# Optional für lokale Entwicklung mit Wrangler:
+# 1) KV namespace im Cloudflare Dashboard anlegen
+# 2) id einsetzen
+# [[kv_namespaces]]
+# binding = "RADPROMPT_KV"
+# id = "<KV_NAMESPACE_ID>"

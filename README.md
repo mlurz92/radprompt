@@ -1,126 +1,89 @@
 # RadPrompt
 
-RadPrompt ist ein kompaktes, hoch responsives Prompt-Button-Dashboard für radiologische KI-Workflows. Die Anwendung ist für Windows 11 und produktives Arbeiten neben Browser, RIS, PACS oder Befundungssoftware ausgelegt.
+Kompakte, moderne Prompt-Board-Anwendung für Cloudflare Pages unter `radprompt.pages.dev`.
 
-## Ziel
+## Enthalten
 
-Die App dient als schnell platzierbare Widget-/Buttonleiste mit den am häufigsten genutzten Prompt-Templates. Ein Klick auf eine Promptkarte kopiert den vollständig ausgefüllten Prompt in die Zwischenablage.
+- Reine No-Build-Webanwendung: `index.html`, `styles.css`, `app.js`
+- Cloudflare Pages Functions:
+  - `GET /api/state`
+  - `PUT /api/state`
+  - `GET /api/health`
+- Persistenz über Workers KV Binding `RADPROMPT_KV`
+- Seed-Daten aus `Beispielprompts.txt`
+- Prof.-Schäfer-Textdokumente als statische Assets unter `/data/`
+- Favoriten-Bar, Ordner, Drag&Drop-Sortierung, Platzhalterfelder, Modalitäts-Dropdown, Import/Export, Health-Panel
+- Fallback auf `localStorage`, falls KV noch nicht gebunden ist
 
-## Finaler Fix dieses Pakets
+## Repository-Struktur
 
-Diese Version ersetzt das vorher zu große und teilweise unbedienbare Layout durch eine stabilere Oberfläche:
+```text
+radprompt-app/
+├─ index.html
+├─ styles.css
+├─ app.js
+├─ manifest.webmanifest
+├─ service-worker.js
+├─ _headers
+├─ _redirects
+├─ wrangler.toml
+├─ assets/
+│  └─ favicon.svg
+├─ data/
+│  ├─ seed.json
+│  ├─ prof-schaefer-ct.txt
+│  └─ prof-schaefer-mrt.txt
+└─ functions/
+   └─ api/
+      ├─ state.js
+      └─ health.js
+```
 
-- normales Dokument-Scrolling statt blockierendem Vollbildlayout,
-- kompakte Sticky-Titelleiste,
-- echte horizontale Favoritenleiste,
-- kleinere und klickbare Promptkarten,
-- mobile Einspalten-/Zweispaltenlayouts,
-- Widgetmodus mit schmalem Dashboard,
-- kein automatisch geöffnetes Systemmenü,
-- Dropdownmenü statt großem blockierendem Modalmenü,
-- kurze Cache-Header für alle Assets,
-- Versionierungsquerys für CSS/JS,
-- automatische Ergänzung fehlender Seed-Prompts auch bei vorhandenem KV-State.
+## Deployment über GitHub + Cloudflare Dashboard
 
-## Struktur
+1. GitHub-Repository anlegen, z. B. `radprompt`.
+2. Den kompletten Inhalt dieses Ordners in das Repository hochladen.
+3. Cloudflare Dashboard öffnen → **Workers & Pages** → **Create application** → **Pages** → GitHub verbinden.
+4. Repository auswählen.
+5. Build-Konfiguration:
+   - Framework preset: **None**
+   - Build command: leer lassen
+   - Build output directory: `/` oder leer/root, je nach Cloudflare-Maske
+6. Deploy ausführen.
+7. KV Namespace anlegen:
+   - **Workers & Pages** → **KV** → Namespace erstellen: `RADPROMPT_KV`
+8. KV Binding am Pages-Projekt setzen:
+   - Pages-Projekt → **Settings** → **Bindings** → **Add** → **KV namespace**
+   - Variable name: `RADPROMPT_KV`
+   - Namespace: `RADPROMPT_KV`
+9. Projekt erneut deployen, damit das Binding aktiv wird.
+10. `https://radprompt.pages.dev/api/health` öffnen.
+    - Erwartet: `ok: true`, `kv: true`, `probes.binding/read/write: true`.
+11. App öffnen, auf **Seed neu laden** oder **Speichern** klicken, damit der initiale State in KV geschrieben wird.
 
-    index.html
-    app.webmanifest
-    _headers
-    README.md
-    assets/css/radprompt.css
-    assets/js/defaults.js
-    assets/js/radprompt.js
-    assets/data/prompts.txt
-    assets/data/befundbeispiele-prof-schaefer-ct.txt
-    assets/data/befundbeispiele-prof-schaefer-mrt.txt
-    assets/icons/favicon.svg
-    functions/api/state.js
-    functions/api/health.js
+## Lokale Prüfung optional
 
-## Funktionen
+```bash
+npx wrangler pages dev . --kv=RADPROMPT_KV
+```
 
-- Promptkarten als Button-Dashboard.
-- Ganze Karte klickbar.
-- Favoritenleiste für Schnellzugriff.
-- Ordner und Filter.
-- Suche mit `/`.
-- Command Center mit `Ctrl+K`.
-- Neuer Prompt mit `Ctrl+N`.
-- Speichern/Synchronisieren mit `Ctrl+S`.
-- Drag-and-Drop für Ordner, Karten und Favoriten über SortableJS.
-- Automatische Felder für `***Platzhalter***`.
-- `***Modalität***` immer als Dropdown mit `CT`, `MRT`, `Röntgen`, `CT&MRT`.
-- `***THEMA***` als Texteingabe.
-- Prof.-Schäfer-Prompts kopieren zusätzlich CT- und MRT-Beispielkorpus.
-- Import/Export des JSON-State.
-- Cloudflare Workers KV über Pages Functions.
-- LocalStorage-Fallback.
+Dann öffnen:
 
-## Cloudflare Pages Deployment
+```text
+http://127.0.0.1:8788
+http://127.0.0.1:8788/api/health
+```
 
-1. Repository mit den Dateien im Root erstellen.
-2. Cloudflare Pages öffnen.
-3. GitHub-Repository verbinden.
-4. Framework preset: `None`.
-5. Build command: leer.
-6. Build output directory: `/` oder `.`.
-7. Deploy ausführen.
+## Bedienung
 
-## KV Binding
+- Prompt kopieren: Platzhalter ausfüllen → **Kopieren**.
+- `***Modalität***` wird automatisch als Dropdown mit `CT`, `MRT`, `Röntgen`, `CT&MRT` gerendert.
+- Prof.-Schäfer-Prompts kopieren zusätzlich `prof-schaefer-ct.txt` und `prof-schaefer-mrt.txt` in die Zwischenablage.
+- Prompt bearbeiten/verschieben: **Erweitern** → Ordner ändern → **Übernehmen**.
+- Drag&Drop: Promptkarten im aktiven Ordner oder Ordner links ziehen.
+- Favorit: Stern auf der Karte aktivieren; erscheint in der Favoriten-Bar.
+- Backup: **Export** erzeugt JSON; **Import** spielt JSON zurück.
 
-Der Variable name für das Pages-Function-Binding muss exakt sein:
+## Hinweis
 
-    RADPROMPT_KV
-
-Der KV-Key für den App-State lautet:
-
-    radprompt:state:v1
-
-Nach dem Setzen oder Ändern des Bindings muss neu deployed werden.
-
-## API
-
-### Health
-
-    GET /api/health
-
-Prüft KV-Binding, KV-Schreibprobe, KV-Leseprobe, KV-Löschprobe und vorhandenen State.
-
-### State laden
-
-    GET /api/state
-
-### State speichern
-
-    PUT /api/state
-    POST /api/state
-
-## Promptstartset
-
-Die Datei `assets/data/prompts.txt` nutzt dieses Format:
-
-    # Promptname:
-
-    Prompttext mit ***Platzhaltern***
-
-Nur Zeilen mit `# Name:` starten einen neuen Prompt. Markdown-Überschriften ohne diesen Abschluss bleiben Bestandteil des aktuellen Prompts.
-
-## Testplan
-
-- App öffnen.
-- Prüfen, dass kein Menü automatisch geöffnet ist.
-- Scrollen im Browser prüfen.
-- Favoritenleiste horizontal scrollen.
-- Prompt mit `***Modalität***` kopieren.
-- Prompt mit `***THEMA***` kopieren.
-- Dense-View aktivieren.
-- Widgetmodus aktivieren.
-- Prompt bearbeiten und speichern.
-- Favorit setzen und per Leiste kopieren.
-- `/api/health` prüfen.
-- KV-Sync testen.
-
-## Datenschutz
-
-RadPrompt ist für Prompt-Templates vorgesehen. Keine Patientennamen, Geburtsdaten, Fallnummern, Patienten-IDs, personenbezogene klinische Angaben oder DICOM-Daten dauerhaft speichern.
+Die Anwendung enthält bewusst keine Authentifizierung. Bei öffentlicher Domain kann jeder Besucher mit Browserzugriff den KV-State ändern. Das entspricht dem geforderten einfachen Setup ohne zusätzliche Sicherungsmaßnahmen.

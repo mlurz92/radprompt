@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="description" content="RadPrompt – kompaktes Prompt-Button-Board für Radiologie-Templates mit Cloudflare KV-Synchronisation.">
+  <title>RadPrompt</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="background-orb orb-one" aria-hidden="true"></div>
+  <div class="background-orb orb-two" aria-hidden="true"></div>
+  <div class="shell">
+    <aside class="side-panel glass-panel" aria-label="Navigation und Status">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">RP</div>
+        <div>
+          <h1>RadPrompt</h1>
+          <p>Prompt-Board · KV-synchronisiert</p>
+        </div>
+      </div>
+
+      <div class="status-card" id="syncStatus" data-status="checking">
+        <span class="status-dot"></span>
+        <div>
+          <strong>Initialisierung</strong>
+          <small>Lokaler Seed wird vorbereitet</small>
+        </div>
+      </div>
+
+      <label class="search-box" for="searchInput">
+        <span aria-hidden="true">⌕</span>
+        <input id="searchInput" type="search" autocomplete="off" placeholder="Prompt, Ordner, Inhalt suchen …">
+        <kbd>Ctrl K</kbd>
+      </label>
+
+      <nav class="folder-nav" aria-label="Ordner">
+        <div class="section-heading">
+          <span>Ordner</span>
+          <button class="icon-button" id="newFolderBtn" type="button" title="Ordner hinzufügen" aria-label="Ordner hinzufügen">＋</button>
+        </div>
+        <div class="folder-list" id="folderList"></div>
+      </nav>
+
+      <div class="side-actions">
+        <button class="secondary-button" id="newPromptBtn" type="button">Neuer Prompt</button>
+        <button class="secondary-button" id="importBtn" type="button">Import</button>
+        <button class="secondary-button" id="exportBtn" type="button">Export</button>
+        <input class="visually-hidden" id="importFile" type="file" accept="application/json,.json">
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar glass-panel">
+        <div class="title-stack">
+          <span class="eyebrow">Windows-11-Sideboard</span>
+          <h2 id="viewTitle">Prompt-Templates</h2>
+          <p id="viewSubtitle">4er-Reihen, Platzhalterfelder, Favoriten und Drag&amp;Drop-Sortierung.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="chip-button" id="densityBtn" type="button" aria-pressed="false">Kompakt</button>
+          <button class="chip-button" id="healthBtn" type="button">Health</button>
+          <button class="primary-button" id="saveNowBtn" type="button">Speichern</button>
+        </div>
+      </header>
+
+      <section class="favorites glass-panel" aria-labelledby="favoritesTitle">
+        <div class="bar-head">
+          <div>
+            <h3 id="favoritesTitle">Favoriten</h3>
+            <p>Schnellzugriff auf markierte Templates</p>
+          </div>
+        </div>
+        <div class="favorite-strip" id="favoriteStrip"></div>
+      </section>
+
+      <section class="board glass-panel" aria-label="Prompt Board">
+        <div class="board-head">
+          <div>
+            <h3 id="boardTitle">Aktiver Ordner</h3>
+            <p id="boardMeta">Bereit</p>
+          </div>
+          <div class="board-tools">
+            <button class="ghost-button" id="resetBtn" type="button">Seed neu laden</button>
+          </div>
+        </div>
+        <div class="prompt-grid" id="promptGrid"></div>
+        <div class="empty-state" id="emptyState" hidden>
+          <strong>Keine passenden Prompts</strong>
+          <span>Suche ändern oder neuen Prompt anlegen.</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
+
+  <div class="modal-backdrop" id="editorModal" aria-hidden="true">
+    <section class="modal glass-panel" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+      <header class="modal-head">
+        <div>
+          <span class="eyebrow" id="editorMode">Prompt</span>
+          <h2 id="editorTitle">Prompt bearbeiten</h2>
+        </div>
+        <button class="icon-button" id="closeEditorBtn" type="button" aria-label="Dialog schließen">×</button>
+      </header>
+      <form id="editorForm" class="editor-form">
+        <input type="hidden" id="editorPromptId">
+        <label>
+          <span>Name</span>
+          <input id="editorTitleInput" type="text" required maxlength="140" autocomplete="off">
+        </label>
+        <label>
+          <span>Ordner</span>
+          <select id="editorFolderSelect"></select>
+        </label>
+        <label>
+          <span>Prompttext</span>
+          <textarea id="editorBodyInput" spellcheck="false" required></textarea>
+        </label>
+        <div class="editor-grid">
+          <label class="toggle-line">
+            <input id="editorFavoriteInput" type="checkbox">
+            <span>Favorit</span>
+          </label>
+          <label class="toggle-line">
+            <input id="editorSchaeferInput" type="checkbox">
+            <span>Prof.-Schäfer-Dokumente beim Kopieren anhängen</span>
+          </label>
+        </div>
+        <div class="detected-box" id="detectedPlaceholders"></div>
+        <footer class="modal-actions">
+          <button class="danger-button" id="deletePromptBtn" type="button">Löschen</button>
+          <div class="modal-action-group">
+            <button class="secondary-button" id="duplicatePromptBtn" type="button">Duplizieren</button>
+            <button class="primary-button" type="submit">Übernehmen</button>
+          </div>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="folderModal" aria-hidden="true">
+    <section class="mini-modal glass-panel" role="dialog" aria-modal="true" aria-labelledby="folderModalTitle">
+      <header class="modal-head">
+        <div>
+          <span class="eyebrow">Ordner</span>
+          <h2 id="folderModalTitle">Ordner bearbeiten</h2>
+        </div>
+        <button class="icon-button" id="closeFolderBtn" type="button" aria-label="Dialog schließen">×</button>
+      </header>
+      <form id="folderForm" class="editor-form">
+        <input type="hidden" id="folderIdInput">
+        <label>
+          <span>Ordnername</span>
+          <input id="folderNameInput" type="text" required maxlength="80" autocomplete="off">
+        </label>
+        <footer class="modal-actions">
+          <button class="danger-button" id="deleteFolderBtn" type="button">Löschen</button>
+          <button class="primary-button" type="submit">Speichern</button>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="healthModal" aria-hidden="true">
+    <section class="modal glass-panel" role="dialog" aria-modal="true" aria-labelledby="healthTitle">
+      <header class="modal-head">
+        <div>
+          <span class="eyebrow">Diagnostik</span>
+          <h2 id="healthTitle">Cloudflare / KV Health</h2>
+        </div>
+        <button class="icon-button" id="closeHealthBtn" type="button" aria-label="Dialog schließen">×</button>
+      </header>
+      <pre class="health-output" id="healthOutput">Wird geprüft …</pre>
+      <footer class="modal-actions single">
+        <button class="secondary-button" id="copyHealthBtn" type="button">Diagnostik kopieren</button>
+      </footer>
+    </section>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
