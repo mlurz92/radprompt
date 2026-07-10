@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "RadPrompt",
+  "short_name": "RadPrompt",
+  "description": "Schnellzugriffsboard für radiologische KI-Prompts",
+  "lang": "de-DE",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#07090c",
+  "theme_color": "#090b0f",
+  "categories": ["productivity", "medical"],
+  "icons": [
+    {"src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Neuer Prompt", "short_name": "Prompt", "url": "/?action=new-prompt", "icons": [{"src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml"}]},
+    {"name": "Favoriten", "short_name": "Favoriten", "url": "/?view=favorites", "icons": [{"src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml"}]}
+  ]
+}
