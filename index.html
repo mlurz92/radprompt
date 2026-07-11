@@ -1,78 +1,71 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RadPrompt</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="bg-orbs">
+
+    <div id="background-effects" class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
     </div>
 
-    <div id="app-container" class="aero-glass">
-        <header id="top-header">
-            <div id="breadcrumb"></div>
-            <div id="controls">
-                <button id="btn-add-folder" class="control-btn" title="Ordner hinzufügen" aria-label="Ordner hinzufügen">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
-                    <span>Ordner</span>
+    <div id="radprompt-app" class="widget-container fixed inset-0 z-10 flex flex-col p-4 md:p-6 lg:p-8">
+        
+        <header class="widget-header flex items-center justify-between mb-4 px-2 md:px-4">
+            <div class="header-left flex items-center gap-3 md:gap-4">
+                <button id="back-btn" class="icon-btn hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
-                <button id="btn-add-prompt" class="control-btn" title="Prompt hinzufügen" aria-label="Prompt hinzufügen">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                <h1 id="app-title" class="text-xl md:text-2xl font-semibold tracking-wide text-gray-100 select-none">RadPrompt</h1>
+                <div id="breadcrumb" class="breadcrumb text-sm text-gray-400 hidden md:flex items-center gap-2"></div>
+            </div>
+            <div class="header-right flex items-center gap-2 md:gap-3">
+                <button id="add-prompt-btn" class="action-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                     <span>Prompt</span>
                 </button>
-                <button id="btn-toggle-sort" class="control-btn" title="Sortieren aktivieren" aria-label="Sortieren aktivieren">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                    <span>Sortieren</span>
+                <button id="add-folder-btn" class="action-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                    <span>Ordner</span>
+                </button>
+                <button id="sort-btn" class="icon-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4M7 20V4M11 4h10M11 8h7M11 12h4"/></svg>
                 </button>
             </div>
         </header>
 
-        <div id="folder-selector-container">
-            <div id="folder-selector"></div>
-        </div>
-
-        <main id="card-grid">
-            <div id="empty-state" class="hidden">
-                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                <h3>Ordner ist leer</h3>
-                <p>Erstelle einen neuen Prompt oder Ordner über die Schaltflächen oben rechts.</p>
-            </div>
+        <main id="cards-container" class="cards-grid flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1 md:pr-2">
         </main>
 
-        <div id="favorites-bar" class="collapsed">
-            <div id="favorites-header">
-                <span>Favoriten</span>
-                <button id="btn-toggle-fav" class="chevron-btn" aria-label="Favoritenleiste ein- oder ausklappen">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                </button>
+        <footer class="widget-footer mt-4">
+            <div id="favorites-bar" class="favorites-bar">
+                <div class="favorites-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>Favoriten</span>
+                </div>
+                <div id="favorites-container" class="favorites-list flex-1 flex items-center gap-2 overflow-x-auto custom-scrollbar-horizontal"></div>
             </div>
-            <div id="favorites-content"></div>
-        </div>
+        </footer>
+
     </div>
 
-    <div id="card-overlay"></div>
-
-    <div id="edit-modal" class="modal-overlay">
-        <div class="modal-content aero-glass-strong">
-            <h2 id="modal-title">Element bearbeiten</h2>
-            <input type="text" id="edit-name" placeholder="Name" class="text-input">
-            <textarea id="edit-text" placeholder="Prompt-Text (Platzhalter: ***Name***)" class="text-input" rows="8"></textarea>
-            <div class="modal-actions">
-                <button id="btn-save-modal" class="primary-btn">Speichern</button>
-                <button id="btn-cancel-modal" class="ghost-btn">Abbrechen</button>
-            </div>
-        </div>
+    <div id="modal-overlay" class="modal-overlay fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div id="modal-content" class="modal-content w-full max-w-2xl max-h-[90vh] flex flex-col"></div>
     </div>
 
-    <div id="toast-container"></div>
+    <div id="toast-container" class="toast-container fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none"></div>
 
+    <script src="data.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

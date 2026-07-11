@@ -1,567 +1,544 @@
-let state = {
-    items: [],
-    currentFolder: 'root',
-    sortMode: false,
-    favorites: [],
-    draggedItem: null
+'use strict';
+
+const App = {
+    state: {
+        currentPath: ['root'],
+        data: null,
+        favorites: [],
+        isSorting: false
+    },
+    elements: {},
+    sortableInstance: null
 };
 
-const defaultItems = [
-    { id: 'folder-1', type: 'folder', title: 'Radiologische Bildinterpretation', parent: 'root', order: 0 },
-    { id: 'folder-2', type: 'folder', title: 'Protokoll- und Befundungshilfe', parent: 'root', order: 1 },
-    { id: 'prompt-1', type: 'prompt', title: 'Bildinterpretation I', parent: 'folder-1', order: 0, isSchaefer: false, text: `Klinische Angaben: ***Klinische Angaben***\nFragestellung: ***Fragestellung***\n\nDu bist ein erfahrener Facharzt für Radiologie mit meisterlicher Expertise in der Schnittbilddiagnostik. Deine Aufgabe ist die detaillierte Analyse der angehängten Bilddaten (CT/MRT/Röntgen) und die Erstellung eines professionellen Befundes.\n\n**Deine Arbeitsweise:**\n\n1. **Frame-by-Frame Analyse:** Betrachte jede Sequenz, jedes Bild, jede DICOM und jedes Video minutiös.\n2. **Anatomische Zuordnung:** Ordne Läsionen sicher den anatomischen Strukturen zu und korreliere diese in allen verfügbaren Ebenen (tra/cor/sag) und Sequenzen.\n3. **Abweichung von der Norm:** Identifiziere von der Norm abweichende Strukturen sicher, insbesondere bezüglich deren Lage und Verlauf, Signalqualitäten/-intensitäten, Größe und alle weiteren möglichen typischen Veränderungen\n4. **Signalcharakteristika:** Beurteile Läsionen anhand ihrer Signalintensitäten/Dichte und Lage/Verlauf in der Zusammenschau aller Gewichtungen/Fensterungen.\n5. **Orientierung:** Beachte strikt die radiologische Orientierung (rechts im Bild = links am Patienten).\n6. **Umgebung/Begleitverletzungen:** Achte auch auf Veränderungen in unmittelbarer Nachbarschaft, welche die gleiche/Ähnliche Ursache haben oder im Zuge eines komplexen Musters auftreten können. Führe auch hierzu eine Internetrecherche durch und gleiche immer wieder mit deinen Beobachtungen ab.\n7. **Abgleich mit typischen Literaturangaben**: Du gleichst Auffälligkeiten nach einer Internetrecherche ab und achtest dabei auch auf typische Begleitverletzungen.\n8. **Nutze Python**: Nutze neben den original DICOM Bildern verschiedene Werkzeuge zum zoomen, messen, fenstern usw. um eine optimale Detailbegutachtung durchführen zu können.\n\nWas du immer beim Betrachten von Auffälligkeiten und deren Einordnung machst:\n\n* Nutze dein Vollständiges Wissen von der Norm, Verlauf, Varianten, Abstufungen, Zusammenhängen und Begleiterscheinungen welche den verschiedenen Veränderungen zu Grunde liegen und versuche dies.\n* Kombiniere und finde mögliche Zusammenhänge und Wege.\n\n**Deine Ausgabe in zwei Teilen:**\n\n**TEIL 1: Detaillierte Analyse & Reasoning**\n\n* Überlege, welche Region basierend auf den klinischen Angaben im Fokus stehen muss.\n* Erstelle eine Liste wahrscheinlicher Diagnosen und Differenzialdiagnosen.\n* Gib für jede Differenzialdiagnose eine Wahrscheinlichkeit an und begründe diese anhand der Bildmorphologie und Klinik.\n* Erkläre deine Entscheidungen transparent und fachlich fundiert.\n\n**TEIL 2: RIS-konformer Befundbericht**\nVerfasse am Ende deiner Antwort einen **finalen Befundbericht**, der direkt in das Radiologie-Informationssystem (RIS) kopiert werden kann.\n\n* **Stil:** Kompakter, präziser Fließtext (keine Stichpunkte im Fließtext, außer bei Listen von Maßen). Strikt im TELEGRAFISCHEN NOMINALSTIL (Prof. Schäfer Stil).\n* **Terminologie:** Verwende hochprofessionellen radiologischen Fachjargon.\n* **Fokus:** Konzentriere dich auf das Wesentliche. Positive Befunde und relevante negative Befunde.\n* **Struktur:** Unterteile strikt in **Befund** und **Beurteilung**.\n\n**Qualitätssicherung:**\n\n* Überprüfe deine Antwort vor der Ausgabe auf Vollständigkeit bezüglich der Fragestellung.\n* Markiere essenzielle Informationen in der Analyse **fett**.\n* Arbeite sorgfältig, präzise und effizient.\n\n**Arbeitsweise:**\nFür dich gilt immer folgendes:\n\n* Teile umfangreiche, komplexe Aufgaben in gut zu bewältigende kleinere Teilaufgaben. Arbeite diese nacheinander koordiniert ab und höre erst auf, wenn du die Gesamtaufgabe vollständig und optimal bearbeitet hast.\n* Kontrolliere regelmäßig und iterativ deinen Fortschritt und stelle sicher, dass du alles vollständig und perfekt bearbeitest.\n* Führe eine perfekt passende Recherche im Internet durch bis in lächerliche Tiefe und nutze dabei die passenden Tools.\n* Dabei verwendest du zahlreiche unterschiedliche seriöse Quellen und auch auf das Thema spezialisierte User-Foren.\n* Suche so lange, bis du alle Informationen gefunden hast und das Thema differenziert betrachten kannst, um auf dieser Basis deine Antwort und Aufgabe optimal zu bearbeiten.\n* Denke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt.\n* Nutze die passenden Tools.\n* Beeindrucke mich mit einer perfekten Antwort.` },
-    { id: 'prompt-2', type: 'prompt', title: 'Bildinterpretation II', parent: 'folder-1', order: 1, isSchaefer: false, text: `=== SYSTEM-PROMPT: RADIOLOGISCHE BILDBEFUNDUNG (CT/MRT/RÖNTGEN) AUS SERIEN-/SEQUENZ-VIDEOS ===\n\n# ROLLE & MISSION\n\nDu bist ein erfahrener Facharzt für Radiologie mit meisterlicher Schnittbildexpertise.\nAufgabe: Aus den übergebenen Bilddaten (Videos durchgescrollter MRT-Sequenzen / CT-Serien bzw. Einzelbilder), den KLINISCHEN ANGABEN und der FRAGESTELLUNG einen maximal präzisen, kalibrierten und RIS-fähigen Befund erstellen. Du arbeitest mit der Sorgfalt einer Doppelbefundung: erst befunden, dann gegen dich selbst prüfen.\n\n# EINGABE\n\n* KLINISCHE ANGABEN: ***Klinische Angaben***\n* FRAGESTELLUNG: ***Fragestellung***\n* BILDDATEN: {Videos/Serien/Sequenzen, ggf. Voruntersuchung}\n\n# OBERSTE GRUNDPRINZIPIEN (nicht verhandelbar)\n\n1. EVIDENZBINDUNG: Befunde NUR aus tatsächlich sichtbarem Bildinhalt. Erfinde nichts – keine Läsionen, keine Messwerte, keine Normalbefunde, die du nicht eingesehen hast.\n2. BILDBEFUND SCHLÄGT LITERATUR: Recherche dient der Einordnung, NIE der Erzeugung von Befunden. Passe niemals die Bildbeschreibung an eine Theorie an. Wenn Bild und Literatur divergieren, gewinnt das Bild – benenne die Diskrepanz.\n3. KALIBRIERUNG STATT SCHEINSICHERHEIT: Kennzeichne jede Aussage mit Sicherheitsgrad: [sicher] / [wahrscheinlich] / [fraglich] / [nicht abgrenzbar/nicht beurteilbar].\n4. UNSICHERHEIT IST EIN BEFUND: Nicht oder nur eingeschränkt beurteilbare Strukturen/Regionen MÜSSEN explizit als solche benannt werden (mit Grund: Auflösung, fehlende Sequenz/Phase, Artefakt, Anschnitt, Kompression).\n5. KEIN TUNNELBLICK: Die Fragestellung lenkt die Aufmerksamkeit, ersetzt aber NICHT die vollständige systematische Durchmusterung aller mitabgebildeten Strukturen.\n6. NUTZE PYTHON: Nutze neben den original DICOM-Dateien verschiedene Werkzeuge zum zoomen, messen, fenstern usw. um eine optimale Detailbegutachtung durchführen zu können.` },
-    { id: 'prompt-3', type: 'prompt', title: 'Interpretation Revision', parent: 'folder-1', order: 2, isSchaefer: false, text: `Betrachte nochmal alle DICOM-Dateien/Videos vollständig unter Beachtung jedes einzelnen Frames, ohne etwas zu überspringen, zu kürzen oder wegzulassen.\n\nFühre mindestens 6 weitere Iterationen mit vollständiger Überprüfung, Recherche und Verfeinerung der Antwort durch.\n\nFühre zusätzlich eine ausführliche Internetrecherche passend zum Thema in verschiedenen seriösen Quellen bis ins lächerlich kleinste Detail durch.\n\nLokalisiere nochmal die pathologischen Veränderungen akkurat und sicher in jedem Frame und betrachte sie exakt in allen vorliegenden Sequenzen.\n\nFühre eine Bewertung der pathologischen Veränderungen und eine korrekte, wohlüberlegte und durchdachte Schlussfolgerung durch.\n\nTeile umfangreiche, komplexe Aufgaben in gut zu bewältigende kleinere Teilaufgaben. Arbeite diese nacheinander koordiniert ab und höre erst auf, wenn du die Gesamtaufgabe vollständig und optimal bearbeitet hast.\n\nKontrolliere regelmäßig und iterativ deinen Fortschritt und stelle sicher, dass du alles vollständig und perfekt bearbeitest.\n\nFühre eine kritische Betrachtung und Selbstüberprüfung deiner Antworten durch und revidiere diese gegebenenfalls. Denke ausführlich darüber nach. Analysiere dazu nochmal alle meine Anforderungen ganz genau sowie deine zuvor gegebenen Antworten:\n\n* Sind die Antworten optimal und perfekt?\n* Entsprechen und erfüllen die Antworten vollständig meine Anforderungen?\n* Sind die Antworten vollständig und sind alle Details und Feinheiten aller zurückliegenden Anfragen und Anforderungen berücksichtigt und komplett ausgeführt?\n* Überprüfe, ob die Antworten logisch und übersichtlich strukturiert und formatiert sind.\n\nStelle sicher, dass deine jetzige und alle zukünftigen Antworten logisch und konsistent mit vorherigen Interaktionen, Antworten und den definierten Richtlinien sind.\n\nÜberlege gut und plane dein Vorgehen, um optimal und fehlerfrei zu arbeiten. Vermeide Widersprüche und sorge für einen einheitlichen Arbeitsstil.\n\nReflektiere über deine eigenen Antworten und lerne aus Fehlern oder Ineffizienzen. Strebe eine kontinuierliche Verbesserung deiner Arbeitsweise an.\n\nBleibe zu jedem Zeitpunkt vollständig in deiner Rolle und halte dich streng an alle bisherigen und zukünftigen Anweisungen.\n\nDenke ausreichend lange über alle deine Antworten nach und überlege gut für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt.\n\nNutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort.` },
-    { id: 'prompt-4', type: 'prompt', title: 'Prof. Schäfer Befundstil', parent: 'folder-1', order: 3, isSchaefer: true, text: `Schreibe den Befund im kompakten Prof. Schäfer Stil als Fließtext unter Berücksichtigung der typischen Wortwahl, Stil, Reihenfolge, logische Zusammenhänge und Schlussfolgerungen.\n\nAnalysiere dazu alle 250 beigefügten Beispielbefunde von Prof. Schäfer inklusive aller deren Bestandteile vollständig und bis ins lächerlich kleinste Detail, ohne auch nur eine Zeile zu überspringen, zu kürzen oder wegzulassen. Lerne seine typische Wortwahl, Stil, die Art zu Befunden und Herangehensweise. Versuche die Sätze nicht zu lang zu machen sondern eher kompakt und präzise ohne zu abgehackt zu klingen. Wenn du aufzählungen machst, dann verbinde diese nicht mit UND sondern eher mit einem KOMMA, z.B. "Keine arterielle Blutungsquelle, kein relevantes Hämatom." statt "Keine arterielle Blutungsquelle und kein relevantes Hämatom." ABER: "Kein weiteres fokales STIR-positives Knochenmarködem der thorakalen oder lumbalen Wirbelkörper. Keine weitere okkulte Kompressions- oder Berstungsfraktur." statt "Kein weiteres fokales STIR-positives Knochenmarködem der thorakalen oder lumbalen Wirbelkörper, keine weitere okkulte Kompressions- oder Berstungsfraktur.".\n\nBeispiele mit vergleichbarer Modalität, klinischen Angaben und Fragestellungen betrachtest du in einer weiteren Runde Iteration nochmal tief, um jedes auch nur lächerlich kleinste Detail des typischen Prof. Schäfer Befundstil bei diesem speziellen Setting zu erfahren und jede Nuance zu optimieren.\n\nMache das ganze iterativ wiederholend in mindestens 3 vollständigen Runden, bestehend aus:\n\n* Kompletten sowie zusätzlich spezifischen fokussierten Analysen der Beispielbefunde\n* Extraktion der typischen Muster und Stilbestandteile, Wortwahl, Aufbau, Reihenfolge, Klang, Verknüpfung usw.\n* Anwendung auf den gegebenen Nicht-Schäfer-Befund zur Stil-Optimierung und Überarbeitung\n\nFühre eine kritische Betrachtung und Selbstüberprüfung deiner Antworten durch und revidiere diese gegebenenfalls. Denke ausführlich darüber nach. Analysiere dazu nochmal alle meine Anforderungen ganz genau sowie deine zuvor gegebenen Antworten:\n\n* Sind die Antworten optimal und perfekt?\n* Entsprechen und erfüllen die Antworten vollständig meine Anforderungen?\n* Sind die Antworten vollständig und sind alle Details und Feinheiten aller zurückliegenden Anfragen und Anforderungen berücksichtigt und komplett ausgeführt?\n* Überprüfe, ob die Antworten logisch und übersichtlich strukturiert und formatiert sind.\n\nStelle sicher, dass deine jetzige und alle zukünftigen Antworten logisch und konsistent mit vorherigen Interaktionen, Antworten und den definierten Richtlinien sind. Überlege gut und plane dein Vorgehen, um optimal und fehlerfrei zu arbeiten. Vermeide Widersprüche und sorge für einen einheitlichen Arbeitsstil.\n\nReflektiere über deine eigenen Antworten und lerne aus Fehlern oder Ineffizienzen. Strebe eine kontinuierliche Verbesserung deiner Arbeitsweise an. Bleibe zu jedem Zeitpunkt vollständig in deiner Rolle und halte dich streng an alle bisherigen und zukünftigen Anweisungen.\n\nDenke ausreichend lange über alle deine Antworten nach und überlege gut für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort.` },
-    { id: 'prompt-5', type: 'prompt', title: 'Protokoll- und Befundungshilfe', parent: 'folder-2', order: 0, isSchaefer: false, text: `Als Radiologie Experte empfiehlst du Untersuchungsprotokolle für eine ***Modalität*** Untersuchung zum Thema ***THEMA***. Beschränke dich nur auf die radiologischen Aspekte. Schreibe auf deutsch und verwende dabei präzise medizinische und radiologische Fachterminologie mit international gebräuchlichen Fachbegriffen. Du schreibst in Markdown in Stichpunkten, strukturiert mit Überschriften und Zwischenüberschriften sowie zahlreichen Markierungen von Schlagworten in allen Abschnitten. Das Dokumment soll folgende Struktur haben: 1. Kurze Erklärug von ***THEMA*** (markiere Schlagworte Fett), 2. Möchgliche Fragestellungen des Klinikers an die ***Modalität*** bei ***THEMA*** in Stichpunkten (markiere wichtiges Fett). 3. Klassische Darstellung von ***THEMA*** in der ***Modalität***. Welche Pathologien sind zu erwarten? Wie stellen sich die Pathologien in der ***Modalität*** dar? An welchen anatomischen Strukturen manifestieren sich die jeweiligen typischen Veränderungen normalerweise? Wo muss ich genau hinschauen. Erstelle eine Liste und markiere Schlagworte fett. 4. Welche Sequenzen oder Kontrastmittelphase können hilfreich sein um ***THEMA*** in der ***Modalität*** optimal zu beurteilen. Recherchiere hier genau nach Empfehlungen und erstelle eine Tabelle mit Erklärung welche Struktur sich in welcher Sequenz oder Phase am besten zeigt (Markiere Schlagworte fett). 5. Differenzialdiagnosen: Wie lassen sich die jeweiligen Differenzialdiagnosen von ***THEMA*** in der ***Modalität*** sicher unterscheiden (markiere Schlagworte fett). Beginne direkt mit dem Dokument 'Befundungs- und Protokollhilfe: ***THEMA*** in der ***Modalität***'. Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfe deine Antwort anhand einer weiteren unabhängigen Quelle. Liste zum Abschluss alle Quellen auf mit Erklärung wofür diese verwendet wurden. Nutze alle verfügbaren Ressourcen und dein tiefgehendes Fachwissen, um eine umfassende, gut fundierte und präzise Antwort zu geben. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze dann den Artikel fort. Schreibe strukturiert in Markdown mit Überschriften und Zwischenüberschriften und markiere alle Schlagworte in fetter Schrift. Beeindrucke mich mit einer perfekten Antwort.` },
-    { id: 'prompt-6', type: 'prompt', title: 'Übersicht', parent: 'folder-2', order: 1, isSchaefer: false, text: `Korrigiere folgenden radiologischen Befundbericht einer ***Modalität*** Untersuchung in Stil, Wortwahl und Grammatik. Orientiere dich bei der Struktur und Wortwahl an typischen Radiologischen Befundberichten zu entsprechenden Themen, welche du zuvor recherchierst. Die erhobenen Befunde sollen identisch bleiben, du kannst sie aber in eine thematisch passende Struktur, Zusammenhang und Fachterminologie bringen. Schreibe auf deutsch und verwende präzise medizinische und radiologische Fachterminologie mit international gängigen lateinischen Fachbegriffen. Schreibe wie ein erfahrener Radiologe: ###***THEMA***### Antworte nur mit dem von dir geänderten Befundbericht. Und einem Vorschlag einer kurzen Befundbeurteilung entsprechend des Inhaltes des Befundberichtes. Schreibe nichts davor und nichts danach. Schreibe keine Anrede an ärztliche Kollegen, Indikation, Technik oder ähnliches. Beschränke dich rein auf die Umformulierung und Korrektur des erhaltenen Befundberichtes als präzisen und übersichtlichen Fließtext mit kurzen Sätzen oder Halbsätzen sowie den präzisen Vorschlag für die Beurteilung. Erfinde keine neuen Fakten oder Befunde sondern nutze nur die Informationen aus dem Originaltext. Schreibe 3 unterschiedliche Varianten als Vorschlag. Überprüfe bevor du antwortest, ob Sinn, logische und fachliche Zusammenhänge und der Inhalt des ursprünglichen Befundberichtes auch in den korrigierten Version noch erhalten ist. Überprüfe ein weiteres mal akribisch genau ob dein umformulierter Text einer korrekten deutschen Grammatik entspricht und medizinisch und logischen Sinn ergibt. Nutze dein volles Potenzial, deine Fähigkeiten zum Textverständnis und das Internet. Arbeite präzise und genau. Beeindrucke mich mit einer perfekten Antwort.` },
-    { id: 'prompt-7', type: 'prompt', title: 'Übersicht Plus', parent: 'folder-2', order: 2, isSchaefer: false, text: `Erstelle eine umfassende Übersicht zu ***THEMA*** in ***Modalität***, fokussiert auf radiologische Aspekte. Deine Expertise als Radiologe soll dabei helfen, folgende Punkte abzudecken: 1. **Definition und Varianten** von ***THEMA***: Gib eine kurze Beschreibung und unterscheide mögliche Varianten und Formen. 2. **Einteilung/Klassifikation**: Wie wird ***THEMA*** in der ***Modalität*** typischerweise Eingeteilt. Benenne die gebräuchlichste Klassifikation und Erstelle eine Tabelle mit den unterschiedlichen Stadien und wie man diese in der ***Modalität*** sicher zuordnet. Gibt es Key-findings für bestimmte Stadien? 3. **Radiologische Zeichen**: Was sind die Schlüsselzeichen von ***THEMA*** in ***Modalität***? Erläutere, wie und wo nach spezifischen Veränderungen gesucht werden muss. Markiere radiologische Zeichen und Aspekte in Fettschrift. Gibt es pathognomonische Bildzeichen für ***THEMA*** ? 4. **Differenzialdiagnosen**: Stelle eine Tabelle mit Differenzialdiagnosen bereit. Erkläre, wie sich diese voneinander und von ***THEMA*** in ***Modalität*** unterscheiden. Unterscheidungsmerkmale in Fettschrift. 5. **Expertenratschläge**: Teile praktische Tipps für die Bildinterpretation, Tricks wie man ***THEMA*** leichter erkennt, sekundäre Zeichen im Bild inklusive pathognomonischer Zeichen für ***THEMA*** in ***Modalität***. Schlüsselwörter in Fettschrift 6. **Checkliste für den Befund**: Formuliere eine Checkliste mit Stichpunkten und Schlüsselwörtern, die bei der Beurteilung von ***THEMA*** beachtet werden müssen. Was muss alles in der ***Modalität*** bei ***THEMA*** beurteilt werden und nach welchen Kriterien. Worauf sollte man bei ***THEMA*** neben dem Hauptbefund auch immer schauen? Wichtige Aspekte in Fettschrift. Gliedere diesen Unterabschnitt in Hauptaspekte, Weitere Aspekte, sowie Beurteilung. Beachte im ganzen Artikel: Verwende eine klare, strukturierte Darstellung mit Markdown, Überschriften, Zwischenüberschriften und Betonung von Schlüsselwörtern in Fettschrift in allen Abschnitten. Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfe deine Angaben mit einer weiteren unabhängigen Quelle. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze den Artikel fort. Nutze dein volles Potenzial und alle Ressourcen. Beeindrucke mich mit einer perfekten Antwort.` },
-    { id: 'prompt-8', type: 'prompt', title: 'Radiologische Staging Hilfe', parent: 'folder-2', order: 3, isSchaefer: false, text: `Antworte in der Rolle eines Radiologen und Onkologen mit langjähriger Erfahrung und tiefgreifendem Wissen. Erstelle ein radiologisches Dokument zum Thema ***THEMA***, welches strukturiert alle relevanten Informationen zum Staging der Erkrankung mittels ***Modalität*** bereitstellt. Zielgruppe sind Radiologen, daher schreibst du auf deutsch und verwendest dabei präzise medizinische und radiologische Fachterminologie mit international gebräuchlichen Fachbegriffen. Du beschränkst dich auf radiologische Aspekte. Folge dabei dieser Struktur: #Überblick TNM-Klassifikation: Darlegung der TNM-Kriterien von ***THEMA*** in der ***Modalität***, Schlüsselkriterien in Fettschrift. Tabelle mit T-, N-, M-Kategorien von ***THEMA*** mit bildgebenden Kriterien für jede, wichtige Elemente in Fettschrift. Erläuterung zusätzlicher Staging-Kriterien in Stichpunkten, wichtige Punkte fett. #Metastasierungswege und -orte: Aufzählung der bevorzugten Metastasierungswege und -orte als Liste, Hauptpunkte fett hervorgehoben. #Expertentipps für Radiologen: Praktische Ratschläge für das Staging, Schlüsseltipps fett hervorgehoben.#Checkliste für den Befund: Präzise Stichpunkte und Schlagworte was genau beim ***THEMA***-Staging vom Radiologen beurteilt werden muss und auf welche Strukturen genau zu achten ist. Gliedere diesen Unterabschnitt in Hauptaspekte, Weitere Aspekte, sowie Beurteilung; Schlüsselwörter in Fettschrift. Verwendung von Markdown mit Überschriften und Unterüberschriften. Stichpunkte, entscheidende Informationen fett. #Quellen: Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfung mit einer zweiten Quelle. Auflistung aller genutzten Quellen. Beginne direkt mit '# *****THEMA*** - ***Modalität***-Staging**' als Titel. Jedes Element des Dokuments soll die tägliche Arbeit eines Radiologen beim Staging von Erkrankungen unterstützen. Nutze Listen und Tabellen wo möglich. Nutze alle verfügbaren Ressourcen und dein tiefgehendes Fachwissen, um eine umfassende, gut fundierte und präzisse Antwort zu geben. Integriere verschiedene Datenquellen, Tools oder Plattformen, um deine Antwort zu verbessern. Markiere immer und sehr häufig in allen Abschnitten alle Schlagworte in fetter Schrift. Beschränke dich auf radiologische Aspekte des Themas. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze den Artikel fort. Beeindrucke mich mit einer perfekten Antwort.` }
-];
+App.init = function() {
+    this.elements = {
+        appTitle: document.getElementById('app-title'),
+        backBtn: document.getElementById('back-btn'),
+        breadcrumb: document.getElementById('breadcrumb'),
+        cardsContainer: document.getElementById('cards-container'),
+        addPromptBtn: document.getElementById('add-prompt-btn'),
+        addFolderBtn: document.getElementById('add-folder-btn'),
+        sortBtn: document.getElementById('sort-btn'),
+        favoritesContainer: document.getElementById('favorites-container'),
+        modalOverlay: document.getElementById('modal-overlay'),
+        modalContent: document.getElementById('modal-content'),
+        toastContainer: document.getElementById('toast-container')
+    };
 
-const DOM = {
-    grid: document.getElementById('card-grid'),
-    emptyState: document.getElementById('empty-state'),
-    breadcrumb: document.getElementById('breadcrumb'),
-    folderSelector: document.getElementById('folder-selector'),
-    favBar: document.getElementById('favorites-bar'),
-    favContent: document.getElementById('favorites-content'),
-    btnToggleFav: document.getElementById('btn-toggle-fav'),
-    btnAddFolder: document.getElementById('btn-add-folder'),
-    btnAddPrompt: document.getElementById('btn-add-prompt'),
-    btnToggleSort: document.getElementById('btn-toggle-sort'),
-    modal: document.getElementById('edit-modal'),
-    modalTitle: document.getElementById('modal-title'),
-    editName: document.getElementById('edit-name'),
-    editText: document.getElementById('edit-text'),
-    btnSaveModal: document.getElementById('btn-save-modal'),
-    btnCancelModal: document.getElementById('btn-cancel-modal'),
-    toastContainer: document.getElementById('toast-container'),
-    cardOverlay: document.getElementById('card-overlay')
+    this.bindEvents();
+    this.loadData().then(() => {
+        this.render();
+    });
 };
 
-let editingItemId = null;
+App.bindEvents = function() {
+    this.elements.backBtn.addEventListener('click', () => this.navigateBack());
+    this.elements.cardsContainer.addEventListener('click', (e) => {
+        if (e.target === this.elements.cardsContainer) {
+            this.navigateBack();
+        }
+    });
+    this.elements.addPromptBtn.addEventListener('click', () => this.openModal('prompt'));
+    this.elements.addFolderBtn.addEventListener('click', () => this.openModal('folder'));
+    this.elements.sortBtn.addEventListener('click', () => this.toggleSortMode());
+    this.elements.modalOverlay.addEventListener('click', (e) => {
+        if (e.target === this.elements.modalOverlay) this.closeModal();
+    });
+};
 
-async function initApp() {
+App.loadData = async function() {
     try {
-        const res = await fetch('/api/data');
-        if (res.ok) {
-            const data = await res.json();
-            if (data.items && data.items.length > 0) {
-                state.items = data.items;
-                state.favorites = data.favorites || [];
-            } else {
-                state.items = defaultItems;
+        const response = await fetch('/api/kv');
+        if (response.ok) {
+            const result = await response.json();
+            if (result && result.data) {
+                this.state.data = result.data;
+                this.state.favorites = result.favorites || [];
+                return;
             }
-        } else {
-            state.items = defaultItems;
         }
-    } catch (e) {
-        state.items = defaultItems;
+        throw new Error('KV fetch failed');
+    } catch (error) {
+        const localData = localStorage.getItem('radprompt_data');
+        const localFavs = localStorage.getItem('radprompt_favorites');
+        if (localData) {
+            this.state.data = JSON.parse(localData);
+            this.state.favorites = localFavs ? JSON.parse(localFavs) : [];
+        } else {
+            this.state.data = initialData;
+            this.state.favorites = [];
+            this.saveData();
+        }
     }
-    renderAll();
-}
+};
 
-function saveData() {
-    fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: state.items, favorites: state.favorites })
-    });
-}
+App.saveData = async function() {
+    localStorage.setItem('radprompt_data', JSON.stringify(this.state.data));
+    localStorage.setItem('radprompt_favorites', JSON.stringify(this.state.favorites));
+    try {
+        await fetch('/api/kv', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: this.state.data, favorites: this.state.favorites })
+        });
+    } catch (error) {
+        console.warn('KV sync failed, saved locally only.');
+    }
+};
 
-function renderAll() {
-    renderBreadcrumb();
-    renderFolderSelector();
-    renderGrid();
-    renderFavorites();
-}
+App.getCurrentNode = function() {
+    let node = this.state.data;
+    for (let i = 1; i < this.state.currentPath.length; i++) {
+        const id = this.state.currentPath[i];
+        node = node.children.find(child => child.id === id);
+        if (!node) return this.state.data;
+    }
+    return node;
+};
 
-function renderBreadcrumb() {
-    DOM.breadcrumb.innerHTML = '';
-    let path = [];
-    let currentId = state.currentFolder;
+App.render = function() {
+    const node = this.getCurrentNode();
+    this.elements.cardsContainer.innerHTML = '';
     
-    while (currentId !== 'root') {
-        const folder = state.items.find(i => i.id === currentId);
-        if (folder) {
-            path.unshift(folder);
-            currentId = folder.parent;
-        } else {
-            break;
-        }
-    }
+    this.renderBreadcrumb();
+    this.elements.backBtn.classList.toggle('hidden', this.state.currentPath.length === 1);
 
-    const rootEl = document.createElement('span');
-    rootEl.className = 'breadcrumb-item' + (state.currentFolder === 'root' ? ' active' : '');
-    rootEl.innerText = 'Hauptansicht';
-    rootEl.onclick = () => navigateTo('root');
-    DOM.breadcrumb.appendChild(rootEl);
-
-    path.forEach(f => {
-        const sep = document.createElement('span');
-        sep.className = 'breadcrumb-sep';
-        sep.innerText = '>';
-        DOM.breadcrumb.appendChild(sep);
-
-        const el = document.createElement('span');
-        el.className = 'breadcrumb-item' + (state.currentFolder === f.id ? ' active' : '');
-        el.innerText = f.title;
-        el.onclick = () => navigateTo(f.id);
-        DOM.breadcrumb.appendChild(el);
-    });
-}
-
-function renderFolderSelector() {
-    DOM.folderSelector.innerHTML = '';
-    const rootChip = document.createElement('div');
-    rootChip.className = 'folder-chip' + (state.currentFolder === 'root' ? ' active' : '');
-    rootChip.innerText = 'Alles';
-    rootChip.onclick = () => navigateTo('root');
-    DOM.folderSelector.appendChild(rootChip);
-
-    const folders = state.items.filter(i => i.type === 'folder' && i.parent === 'root');
-    folders.forEach(f => {
-        const chip = document.createElement('div');
-        chip.className = 'folder-chip' + (state.currentFolder === f.id ? ' active' : '');
-        chip.innerText = f.title;
-        chip.onclick = () => navigateTo(f.id);
-        DOM.folderSelector.appendChild(chip);
-    });
-}
-
-function renderGrid() {
-    DOM.grid.innerHTML = '';
-    const items = state.items
-        .filter(i => i.parent === state.currentFolder)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    if (items.length === 0) {
-        DOM.grid.appendChild(DOM.emptyState);
-        DOM.emptyState.classList.remove('hidden');
-        return;
-    } else {
-        DOM.emptyState.classList.add('hidden');
-    }
-
-    items.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'card-wrapper';
-        card.dataset.id = item.id;
-        if (state.sortMode) card.draggable = true;
-
-        const front = document.createElement('div');
-        front.className = 'card-face card-front';
-        
-        const title = document.createElement('div');
-        title.className = 'card-title';
-        title.innerText = item.title;
-        front.appendChild(title);
-
-        if (item.type === 'prompt') {
-            const rawPlaceholders = [...item.text.matchAll(/\*\*\*(.*?)\*\*\*/g)].map(m => m[1]);
-            const uniquePlaceholders = [...new Set(rawPlaceholders)];
-            
-            if (uniquePlaceholders.length > 0) {
-                const inputsContainer = document.createElement('div');
-                inputsContainer.className = 'inputs-container';
-                uniquePlaceholders.forEach(varName => {
-                    const group = document.createElement('div');
-                    group.className = 'input-group';
-                    const label = document.createElement('label');
-                    label.innerText = varName;
-                    label.setAttribute('for', `input-${item.id}-${varName}`);
-                    group.appendChild(label);
-                    
-                    if (varName === 'Modalität') {
-                        const select = document.createElement('select');
-                        select.className = 'custom-select';
-                        select.id = `input-${item.id}-${varName}`;
-                        select.dataset.placeholder = varName;
-                        ['CT', 'MRT', 'Röntgen', 'CT&MRT'].forEach(opt => {
-                            const o = document.createElement('option');
-                            o.value = opt;
-                            o.innerText = opt;
-                            select.appendChild(o);
-                        });
-                        group.appendChild(select);
-                    } else {
-                        const input = document.createElement('input');
-                        input.type = 'text';
-                        input.className = 'text-input';
-                        input.id = `input-${item.id}-${varName}`;
-                        input.dataset.placeholder = varName;
-                        group.appendChild(input);
-                    }
-                    inputsContainer.appendChild(group);
-                });
-                front.appendChild(inputsContainer);
-            } else {
-                const preview = document.createElement('div');
-                preview.className = 'card-content-preview';
-                preview.innerText = item.text.substring(0, 100) + '...';
-                front.appendChild(preview);
-            }
-        } else {
-            const preview = document.createElement('div');
-            preview.className = 'card-content-preview';
-            preview.innerText = 'Ordner';
-            front.appendChild(preview);
-        }
-
-        const footer = document.createElement('div');
-        footer.className = 'card-footer';
-        
-        const actionsLeft = document.createElement('div');
-        actionsLeft.className = 'card-actions';
-        
-        const favBtn = document.createElement('button');
-        favBtn.className = 'action-btn';
-        favBtn.setAttribute('aria-label', 'Als Favorit markieren');
-        favBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="${state.favorites.includes(item.id) ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
-        favBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(item.id); };
-        actionsLeft.appendChild(favBtn);
-
-        const editBtn = document.createElement('button');
-        editBtn.className = 'action-btn';
-        editBtn.setAttribute('aria-label', 'Editieren');
-        editBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
-        editBtn.onclick = (e) => { e.stopPropagation(); openModal(item.id); };
-        actionsLeft.appendChild(editBtn);
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'action-btn';
-        delBtn.setAttribute('aria-label', 'Löschen');
-        delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-        delBtn.onclick = (e) => { e.stopPropagation(); deleteItem(item.id); };
-        actionsLeft.appendChild(delBtn);
-
-        footer.appendChild(actionsLeft);
-
-        if (item.type === 'prompt') {
-            const actionsRight = document.createElement('div');
-            actionsRight.className = 'card-actions';
-            
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'action-btn copy-btn';
-            copyBtn.setAttribute('aria-label', 'Prompt kopieren');
-            copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-            copyBtn.onclick = (e) => { e.stopPropagation(); copyPrompt(item); };
-            actionsRight.appendChild(copyBtn);
-
-            const expandBtn = document.createElement('button');
-            expandBtn.className = 'action-btn expand-btn';
-            expandBtn.setAttribute('aria-label', 'Karte erweitern');
-            expandBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
-            expandBtn.onclick = (e) => { e.stopPropagation(); flipCard(card, true); };
-            actionsRight.appendChild(expandBtn);
-            
-            footer.appendChild(actionsRight);
-        } else {
-            const openBtn = document.createElement('button');
-            openBtn.className = 'action-btn open-btn';
-            openBtn.setAttribute('aria-label', 'Ordner öffnen');
-            openBtn.innerHTML = `Öffnen <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
-            openBtn.onclick = (e) => { e.stopPropagation(); navigateTo(item.id); };
-            footer.appendChild(openBtn);
-        }
-
-        front.appendChild(footer);
-        card.appendChild(front);
-
-        if (item.type === 'prompt') {
-            const back = document.createElement('div');
-            back.className = 'card-face card-back';
-            
-            const backHeader = document.createElement('div');
-            backHeader.className = 'card-back-header';
-            
-            const backTitle = document.createElement('div');
-            backTitle.className = 'card-title';
-            backTitle.innerText = item.title;
-            backHeader.appendChild(backTitle);
-
-            const closeBtn = document.createElement('button');
-            closeBtn.className = 'action-btn';
-            closeBtn.setAttribute('aria-label', 'Karte schließen');
-            closeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-            closeBtn.onclick = (e) => { e.stopPropagation(); flipCard(card, false); };
-            backHeader.appendChild(closeBtn);
-            back.appendChild(backHeader);
-
-            const textDisplay = document.createElement('div');
-            textDisplay.className = 'card-full-text';
-            textDisplay.innerText = item.text;
-            back.appendChild(textDisplay);
-
-            const backFooter = document.createElement('div');
-            backFooter.className = 'card-footer';
-            backFooter.style.justifyContent = 'space-between';
-
-            const editBtnBack = document.createElement('button');
-            editBtnBack.className = 'ghost-btn';
-            editBtnBack.innerText = 'Editieren';
-            editBtnBack.setAttribute('aria-label', 'Prompt editieren');
-            editBtnBack.style.padding = '6px 12px';
-            editBtnBack.style.fontSize = '0.8rem';
-            editBtnBack.onclick = (e) => { e.stopPropagation(); openModal(item.id); };
-            backFooter.appendChild(editBtnBack);
-
-            back.appendChild(backFooter);
-            card.appendChild(back);
-        }
-
-        if (!state.sortMode) {
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('.action-btn') || e.target.closest('.input-group') || e.target.closest('.text-input') || e.target.closest('.custom-select') || e.target.closest('label')) return;
-                if (item.type === 'folder') navigateTo(item.id);
-            });
-        } else {
-            card.addEventListener('dragstart', handleDragStart);
-            card.addEventListener('dragover', handleDragOver);
-            card.addEventListener('drop', handleDrop);
-            card.addEventListener('dragend', handleDragEnd);
-            card.addEventListener('dragleave', handleDragLeave);
-        }
-
-        DOM.grid.appendChild(card);
-    });
-}
-
-function renderFavorites() {
-    DOM.favContent.innerHTML = '';
-    if (state.favorites.length === 0) {
-        DOM.favContent.innerHTML = '<span style="color: var(--text-secondary); font-size: 0.8rem;">Keine Favoriten markiert</span>';
+    if (!node.children || node.children.length === 0) {
+        this.elements.cardsContainer.innerHTML = `<div class="empty-state w-full h-full flex items-center justify-center text-gray-500 text-sm">Ordner ist leer. Klicke auf einen freien Bereich, um zurückzugehen.</div>`;
         return;
     }
-    state.favorites.forEach(favId => {
-        const item = state.items.find(i => i.id === favId);
-        if (item) {
-            const el = document.createElement('div');
-            el.className = 'fav-item';
-            el.innerText = item.title;
-            el.onclick = () => {
-                if (item.type === 'folder') navigateTo(item.id);
-                else {
-                    state.currentFolder = item.parent;
-                    renderAll();
-                    setTimeout(() => {
-                        const card = document.querySelector(`.card-wrapper[data-id="${item.id}"]`);
-                        if (card) {
-                            flipCard(card, true);
-                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    }, 100);
+
+    node.children.forEach(item => {
+        const card = this.createCard(item);
+        this.elements.cardsContainer.appendChild(card);
+    });
+
+    this.initSortable();
+    this.renderFavorites();
+
+    gsap.fromTo('.card', 
+        { opacity: 0, y: 20, scale: 0.95 }, 
+        { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.03, ease: 'power2.out' }
+    );
+};
+
+App.renderBreadcrumb = function() {
+    this.elements.breadcrumb.innerHTML = '';
+    this.state.currentPath.forEach((id, index) => {
+        if (index > 0) {
+            const sep = document.createElement('span');
+            sep.textContent = '/';
+            sep.className = 'text-gray-600';
+            this.elements.breadcrumb.appendChild(sep);
+        }
+        const span = document.createElement('span');
+        span.className = 'breadcrumb-item';
+        span.textContent = id === 'root' ? 'Home' : this.findNodeById(id).title;
+        span.addEventListener('click', () => {
+            this.state.currentPath = this.state.currentPath.slice(0, index + 1);
+            this.render();
+        });
+        this.elements.breadcrumb.appendChild(span);
+    });
+};
+
+App.findNodeById = function(id, node = this.state.data) {
+    if (node.id === id) return node;
+    if (!node.children) return null;
+    for (let child of node.children) {
+        const found = this.findNodeById(id, child);
+        if (found) return found;
+    }
+    return null;
+};
+
+App.createCard = function(item) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = item.id;
+    card.draggable = this.state.isSorting;
+
+    const inner = document.createElement('div');
+    inner.className = 'card-inner';
+
+    const front = document.createElement('div');
+    front.className = 'card-face card-front';
+
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.textContent = item.title;
+    front.appendChild(title);
+
+    if (item.type === 'prompt') {
+        const placeholders = this.getPlaceholders(item.text);
+        if (placeholders.length > 0) {
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'card-input-group';
+            placeholders.forEach(ph => {
+                if (ph === 'Modalität') {
+                    const select = document.createElement('select');
+                    select.className = 'card-select';
+                    select.dataset.placeholder = ph;
+                    ['CT', 'MRT', 'Röntgen', 'CT&MRT'].forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = opt;
+                        option.textContent = opt;
+                        select.appendChild(option);
+                    });
+                    inputGroup.appendChild(select);
+                } else {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'card-input';
+                    input.dataset.placeholder = ph;
+                    input.placeholder = ph.replace(/_/g, ' ');
+                    inputGroup.appendChild(input);
                 }
-            };
-            DOM.favContent.appendChild(el);
-        }
-    });
-}
-
-function flipCard(card, show) {
-    if (show) {
-        document.querySelectorAll('.card-wrapper.flipped').forEach(c => {
-            c.classList.remove('flipped');
-        });
-        card.classList.add('flipped');
-        DOM.cardOverlay.classList.add('active');
-    } else {
-        card.classList.remove('flipped');
-        DOM.cardOverlay.classList.remove('active');
-    }
-}
-
-DOM.cardOverlay.addEventListener('click', () => {
-    document.querySelectorAll('.card-wrapper.flipped').forEach(c => flipCard(c, false));
-});
-
-function navigateTo(folderId) {
-    state.currentFolder = folderId;
-    renderAll();
-}
-
-DOM.grid.addEventListener('click', (e) => {
-    if (e.target === DOM.grid || e.target === DOM.emptyState) {
-        if (state.currentFolder !== 'root') {
-            const currentFolderObj = state.items.find(i => i.id === state.currentFolder);
-            if (currentFolderObj) navigateTo(currentFolderObj.parent);
-        }
-    }
-});
-
-function toggleFavorite(id) {
-    const index = state.favorites.indexOf(id);
-    if (index > -1) state.favorites.splice(index, 1);
-    else state.favorites.push(id);
-    saveData();
-    renderGrid();
-    renderFavorites();
-}
-
-async function copyPrompt(item) {
-    let textToCopy = item.text;
-    const rawPlaceholders = [...item.text.matchAll(/\*\*\*(.*?)\*\*\*/g)].map(m => m[1]);
-    const uniquePlaceholders = [...new Set(rawPlaceholders)];
-    
-    if (uniquePlaceholders.length > 0) {
-        const card = document.querySelector(`.card-wrapper[data-id="${item.id}"]`);
-        uniquePlaceholders.forEach(varName => {
-            const input = card.querySelector(`[data-placeholder="${varName}"]`);
-            if (input) {
-                const regex = new RegExp(`\\*\\*\\*${varName}\\*\\*\\*`, 'g');
-                textToCopy = textToCopy.replace(regex, input.value || `[${varName}]`);
-            }
-        });
-    }
-
-    if (item.isSchaefer) {
-        showToast("Lade Prof. Schäfer Beispiele...");
-        try {
-            const [ctRes, mrtRes] = await Promise.all([
-                fetch('assets/Befundbeispiele Prof. Schäfer CT.txt').then(r => r.text()),
-                fetch('assets/Befundbeispiele Prof. Schäfer MRT.txt').then(r => r.text())
-            ]);
-            textToCopy += "\n\n--- BEFUNDBEISPIELE CT ---\n" + ctRes + "\n\n--- BEFUNDBEISPIELE MRT ---\n" + mrtRes;
-        } catch (e) {
-            textToCopy += "\n\n[Hinweis: Prof. Schäfer Beispieldateien konnten nicht geladen werden. Bitte im Repo unter /assets ablegen.]";
-        }
-    }
-
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        showToast("In Zwischenablage kopiert!");
-    }).catch(err => {
-        showToast("Fehler beim Kopieren");
-    });
-}
-
-function openModal(id = null) {
-    editingItemId = id;
-    if (id) {
-        const item = state.items.find(i => i.id === id);
-        DOM.modalTitle.innerText = item.type === 'folder' ? 'Ordner bearbeiten' : 'Prompt bearbeiten';
-        DOM.editName.value = item.title;
-        DOM.editText.value = item.text || '';
-        DOM.editText.style.display = item.type === 'folder' ? 'none' : 'block';
-    } else {
-        DOM.modalTitle.innerText = 'Neu erstellen';
-        DOM.editName.value = '';
-        DOM.editText.value = '';
-        DOM.editText.style.display = 'block';
-    }
-    DOM.modal.classList.add('active');
-}
-
-function closeModal() {
-    DOM.modal.classList.remove('active');
-    editingItemId = null;
-}
-
-DOM.btnAddFolder.onclick = () => {
-    const newFolder = { id: 'folder-' + Date.now(), type: 'folder', title: 'Neuer Ordner', parent: state.currentFolder, order: state.items.filter(i => i.parent === state.currentFolder).length };
-    state.items.push(newFolder);
-    saveData();
-    renderGrid();
-    openModal(newFolder.id);
-};
-
-DOM.btnAddPrompt.onclick = () => {
-    const newPrompt = { id: 'prompt-' + Date.now(), type: 'prompt', title: 'Neuer Prompt', parent: state.currentFolder, order: state.items.filter(i => i.parent === state.currentFolder).length, text: '', isSchaefer: false };
-    state.items.push(newPrompt);
-    saveData();
-    renderGrid();
-    openModal(newPrompt.id);
-};
-
-DOM.btnToggleSort.onclick = () => {
-    state.sortMode = !state.sortMode;
-    DOM.btnToggleSort.classList.toggle('active', state.sortMode);
-    renderGrid();
-};
-
-DOM.btnSaveModal.onclick = () => {
-    const item = state.items.find(i => i.id === editingItemId);
-    if (item) {
-        item.title = DOM.editName.value || 'Unbenannt';
-        if (item.type === 'prompt') {
-            item.text = DOM.editText.value;
-            item.isSchaefer = item.title.toLowerCase().includes('schäfer') || item.text.toLowerCase().includes('prof. schäfer');
-        }
-        saveData();
-        renderAll();
-    }
-    closeModal();
-};
-
-DOM.btnCancelModal.onclick = closeModal;
-
-function deleteItem(id) {
-    if (confirm('Wirklich löschen?')) {
-        state.items = state.items.filter(i => i.id !== id && i.parent !== id);
-        state.favorites = state.favorites.filter(f => f !== id);
-        saveData();
-        renderAll();
-    }
-}
-
-DOM.btnToggleFav.onclick = () => DOM.favBar.classList.toggle('collapsed');
-document.getElementById('favorites-header').onclick = DOM.btnToggleFav.onclick;
-
-function handleDragStart(e) {
-    state.draggedItem = e.target.closest('.card-wrapper').dataset.id;
-    e.target.closest('.card-wrapper').style.opacity = '0.5';
-}
-function handleDragOver(e) {
-    e.preventDefault();
-    const target = e.target.closest('.card-wrapper');
-    if (target) target.style.border = '2px dashed var(--accent)';
-}
-function handleDragLeave(e) {
-    const target = e.target.closest('.card-wrapper');
-    if (target) target.style.border = '1px solid var(--glass-border)';
-}
-function handleDrop(e) {
-    e.preventDefault();
-    const targetElement = e.target.closest('.card-wrapper');
-    if (!targetElement) return;
-    targetElement.style.border = '1px solid var(--glass-border)';
-    
-    const targetId = targetElement.dataset.id;
-    if (state.draggedItem && targetId && state.draggedItem !== targetId) {
-        const draggedItem = state.items.find(i => i.id === state.draggedItem);
-        const targetItem = state.items.find(i => i.id === targetId);
-        
-        if (draggedItem && targetItem && draggedItem.parent === targetItem.parent) {
-            const itemsInFolder = state.items.filter(i => i.parent === draggedItem.parent).sort((a,b) => a.order - b.order);
-            const draggedIndex = itemsInFolder.findIndex(i => i.id === draggedItem.id);
-            const targetIndex = itemsInFolder.findIndex(i => i.id === targetItem.id);
-            
-            itemsInFolder.splice(draggedIndex, 1);
-            itemsInFolder.splice(targetIndex, 0, draggedItem);
-            
-            itemsInFolder.forEach((item, index) => {
-                item.order = index;
             });
-            
-            saveData();
-            renderGrid();
+            front.appendChild(inputGroup);
         }
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn-icon-sm';
+        copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+        copyBtn.title = 'Prompt kopieren';
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.copyPrompt(item, card);
+        });
+        front.appendChild(copyBtn);
+    } else if (item.type === 'folder') {
+        const folderIcon = document.createElement('div');
+        folderIcon.className = 'folder-icon';
+        folderIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); margin: auto 0;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+        front.appendChild(folderIcon);
     }
-}
-function handleDragEnd(e) {
-    document.querySelectorAll('.card-wrapper').forEach(c => {
-        c.style.opacity = '1';
-        c.style.border = '1px solid var(--glass-border)';
+
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'expand-btn';
+    expandBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+    expandBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        card.classList.add('flipped');
     });
-    state.draggedItem = null;
-}
+    front.appendChild(expandBtn);
 
-function showToast(msg) {
+    const favBtn = document.createElement('button');
+    favBtn.className = 'btn-icon-sm fav-btn';
+    favBtn.style.position = 'absolute';
+    favBtn.style.top = '0.5rem';
+    favBtn.style.right = '0.5rem';
+    favBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="${this.state.favorites.includes(item.id) ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    favBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleFavorite(item.id);
+        this.render();
+    });
+    front.appendChild(favBtn);
+
+    const back = document.createElement('div');
+    back.className = 'card-face card-back';
+
+    const backTitle = document.createElement('div');
+    backTitle.className = 'card-title';
+    backTitle.textContent = item.title;
+    back.appendChild(backTitle);
+
+    if (item.type === 'prompt') {
+        const text = document.createElement('div');
+        text.className = 'card-text';
+        text.textContent = item.text;
+        back.appendChild(text);
+    } else {
+        const backText = document.createElement('div');
+        backText.className = 'card-text';
+        backText.textContent = `Ordner enthält ${item.children.length} Element(e).`;
+        back.appendChild(backText);
+    }
+
+    const backActions = document.createElement('div');
+    backActions.className = 'card-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-icon-sm';
+    editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+    editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.openModal(item.type, item);
+    });
+    backActions.appendChild(editBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-icon-sm danger';
+    deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+    deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.deleteItem(item.id);
+    });
+    backActions.appendChild(deleteBtn);
+
+    const closeBackBtn = document.createElement('button');
+    closeBackBtn.className = 'btn-icon-sm';
+    closeBackBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>`;
+    closeBackBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        card.classList.remove('flipped');
+    });
+    backActions.appendChild(closeBackBtn);
+
+    back.appendChild(backActions);
+
+    inner.appendChild(front);
+    inner.appendChild(back);
+    card.appendChild(inner);
+
+    if (item.type === 'folder' && !this.state.isSorting) {
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            this.state.currentPath.push(item.id);
+            this.render();
+        });
+    }
+
+    return card;
+};
+
+App.getPlaceholders = function(text) {
+    const matches = text.match(/\*\*\*(.*?)\*\*\*/g);
+    if (!matches) return [];
+    const unique = [...new Set(matches.map(m => m.replace(/\*\*\*/g, '')))];
+    return unique;
+};
+
+App.copyPrompt = async function(item, cardEl) {
+    let text = item.text;
+    const inputs = cardEl.querySelectorAll('.card-input, .card-select');
+    inputs.forEach(input => {
+        const ph = `***${input.dataset.placeholder}***`;
+        const regex = new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        text = text.replace(regex, input.value || input.dataset.placeholder);
+    });
+
+    try {
+        if (item.isSchaefer) {
+            const promptBlob = new Blob([text], { type: 'text/plain' });
+            const ctBlob = new Blob([schaeferCTText], { type: 'text/plain' });
+            const mrtBlob = new Blob([schaeferMRTText], { type: 'text/plain' });
+            
+            const clipboardItems = [
+                new ClipboardItem({ 'text/plain': promptBlob })
+            ];
+            
+            try {
+                clipboardItems.push(new ClipboardItem({ 'text/plain': ctBlob }));
+                clipboardItems.push(new ClipboardItem({ 'text/plain': mrtBlob }));
+                await navigator.clipboard.write(clipboardItems);
+            } catch (err) {
+                await navigator.clipboard.writeText(text + "\n\n" + schaeferCTText + "\n\n" + schaeferMRTText);
+            }
+        } else {
+            await navigator.clipboard.writeText(text);
+        }
+        this.showToast('Prompt erfolgreich kopiert!', 'success');
+    } catch (err) {
+        this.showToast('Kopieren fehlgeschlagen.', 'error');
+    }
+};
+
+App.toggleFavorite = function(id) {
+    const index = this.state.favorites.indexOf(id);
+    if (index > -1) {
+        this.state.favorites.splice(index, 1);
+    } else {
+        this.state.favorites.push(id);
+    }
+    this.saveData();
+};
+
+App.renderFavorites = function() {
+    this.elements.favoritesContainer.innerHTML = '';
+    if (this.state.favorites.length === 0) {
+        this.elements.favoritesContainer.innerHTML = `<span class="text-gray-600 text-xs">Keine Favoriten markiert</span>`;
+        return;
+    }
+    this.state.favorites.forEach(id => {
+        const item = this.findNodeById(id);
+        if (item) {
+            const fav = document.createElement('div');
+            fav.className = 'fav-item';
+            fav.textContent = item.title;
+            fav.addEventListener('click', () => {
+                if (item.type === 'prompt') {
+                    const cardEl = this.createCard(item);
+                    this.copyPrompt(item, cardEl);
+                } else {
+                    this.state.currentPath = ['root'];
+                    this.navigateIntoFolder(id);
+                }
+            });
+            this.elements.favoritesContainer.appendChild(fav);
+        }
+    });
+};
+
+App.navigateIntoFolder = function(id) {
+    const path = ['root'];
+    const findPath = (node, target, currentPath) => {
+        if (node.id === target) return [...currentPath, node.id];
+        if (!node.children) return null;
+        for (let child of node.children) {
+            const res = findPath(child, target, [...currentPath, node.id]);
+            if (res) return res;
+        }
+        return null;
+    };
+    const fullPath = findPath(this.state.data, id, []);
+    if (fullPath) {
+        this.state.currentPath = fullPath;
+        this.render();
+    }
+};
+
+App.navigateBack = function() {
+    if (this.state.currentPath.length > 1) {
+        this.state.currentPath.pop();
+        this.render();
+    }
+};
+
+App.toggleSortMode = function() {
+    this.state.isSorting = !this.state.isSorting;
+    this.elements.sortBtn.classList.toggle('active', this.state.isSorting);
+    document.querySelectorAll('.card').forEach(c => c.draggable = this.state.isSorting);
+    this.showToast(this.state.isSorting ? 'Sortiermodus aktiviert' : 'Sortiermodus deaktiviert', 'success');
+};
+
+App.initSortable = function() {
+    if (this.sortableInstance) {
+        this.sortableInstance.destroy();
+    }
+    this.sortableInstance = new Sortable(this.elements.cardsContainer, {
+        animation: 200,
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        disabled: !this.state.isSorting,
+        onEnd: (evt) => {
+            const node = this.getCurrentNode();
+            const movedItem = node.children.splice(evt.oldIndex, 1)[0];
+            node.children.splice(evt.newIndex, 0, movedItem);
+            this.saveData();
+        }
+    });
+};
+
+App.openModal = function(type, item = null) {
+    const isEdit = !!item;
+    this.elements.modalContent.innerHTML = `
+        <div class="modal-header">
+            <h2 class="modal-title">${isEdit ? 'Bearbeiten' : 'Hinzufügen'} ${type === 'prompt' ? 'Prompt' : 'Ordner'}</h2>
+            <button class="icon-btn" id="modal-close-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Titel</label>
+                <input type="text" id="modal-title-input" class="form-input" value="${isEdit ? item.title : ''}">
+            </div>
+            ${type === 'prompt' ? `
+            <div class="form-group">
+                <label class="form-label">Prompt-Text (Platzhalter: ***Name***)</label>
+                <textarea id="modal-text-input" class="form-textarea">${isEdit ? item.text : ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Prof. Schäfer Prompt (Kopiert zusätzlich CT/MRT Texte)</label>
+                <select id="modal-schaefer-input" class="form-select">
+                    <option value="false" ${!isEdit || !item.isSchaefer ? 'selected' : ''}>Nein</option>
+                    <option value="true" ${isEdit && item.isSchaefer ? 'selected' : ''}>Ja</option>
+                </select>
+            </div>
+            ` : ''}
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" id="modal-cancel-btn">Abbrechen</button>
+            <button class="btn-primary" id="modal-save-btn">Speichern</button>
+        </div>
+    `;
+
+    this.elements.modalOverlay.classList.remove('hidden');
+    this.elements.modalOverlay.classList.add('flex');
+
+    document.getElementById('modal-close-btn').addEventListener('click', () => this.closeModal());
+    document.getElementById('modal-cancel-btn').addEventListener('click', () => this.closeModal());
+    document.getElementById('modal-save-btn').addEventListener('click', () => {
+        const title = document.getElementById('modal-title-input').value.trim();
+        if (!title) {
+            this.showToast('Titel darf nicht leer sein.', 'error');
+            return;
+        }
+        if (type === 'prompt') {
+            const text = document.getElementById('modal-text-input').value;
+            const isSchaefer = document.getElementById('modal-schaefer-input').value === 'true';
+            if (isEdit) {
+                item.title = title;
+                item.text = text;
+                item.isSchaefer = isSchaefer;
+            } else {
+                this.getCurrentNode().children.push({
+                    id: 'prompt-' + Date.now(),
+                    type: 'prompt',
+                    title,
+                    text,
+                    isSchaefer
+                });
+            }
+        } else {
+            if (isEdit) {
+                item.title = title;
+            } else {
+                this.getCurrentNode().children.push({
+                    id: 'folder-' + Date.now(),
+                    type: 'folder',
+                    title,
+                    children: []
+                });
+            }
+        }
+        this.saveData();
+        this.closeModal();
+        this.render();
+    });
+};
+
+App.closeModal = function() {
+    this.elements.modalOverlay.classList.add('hidden');
+    this.elements.modalOverlay.classList.remove('flex');
+};
+
+App.deleteItem = function(id) {
+    const node = this.getCurrentNode();
+    const index = node.children.findIndex(c => c.id === id);
+    if (index > -1) {
+        const itemName = node.children[index].title;
+        node.children.splice(index, 1);
+        this.state.favorites = this.state.favorites.filter(f => f !== id);
+        this.saveData();
+        this.render();
+        this.showToast(`"${itemName}" gelöscht`, 'success');
+    }
+};
+
+App.showToast = function(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerText = msg;
-    DOM.toastContainer.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-}
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    this.elements.toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+};
 
-initApp();
+document.addEventListener('DOMContentLoaded', () => App.init());
