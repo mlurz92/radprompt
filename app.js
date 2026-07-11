@@ -16,7 +16,7 @@ const defaultItems = [
     { id: 'prompt-5', type: 'prompt', title: 'Protokoll- und Befundungshilfe', parent: 'folder-2', order: 0, isSchaefer: false, text: `Als Radiologie Experte empfiehlst du Untersuchungsprotokolle für eine ***Modalität*** Untersuchung zum Thema ***THEMA***. Beschränke dich nur auf die radiologischen Aspekte. Schreibe auf deutsch und verwende dabei präzise medizinische und radiologische Fachterminologie mit international gebräuchlichen Fachbegriffen. Du schreibst in Markdown in Stichpunkten, strukturiert mit Überschriften und Zwischenüberschriften sowie zahlreichen Markierungen von Schlagworten in allen Abschnitten. Das Dokumment soll folgende Struktur haben: 1. Kurze Erklärug von ***THEMA*** (markiere Schlagworte Fett), 2. Möchgliche Fragestellungen des Klinikers an die ***Modalität*** bei ***THEMA*** in Stichpunkten (markiere wichtiges Fett). 3. Klassische Darstellung von ***THEMA*** in der ***Modalität***. Welche Pathologien sind zu erwarten? Wie stellen sich die Pathologien in der ***Modalität*** dar? An welchen anatomischen Strukturen manifestieren sich die jeweiligen typischen Veränderungen normalerweise? Wo muss ich genau hinschauen. Erstelle eine Liste und markiere Schlagworte fett. 4. Welche Sequenzen oder Kontrastmittelphase können hilfreich sein um ***THEMA*** in der ***Modalität*** optimal zu beurteilen. Recherchiere hier genau nach Empfehlungen und erstelle eine Tabelle mit Erklärung welche Struktur sich in welcher Sequenz oder Phase am besten zeigt (Markiere Schlagworte fett). 5. Differenzialdiagnosen: Wie lassen sich die jeweiligen Differenzialdiagnosen von ***THEMA*** in der ***Modalität*** sicher unterscheiden (markiere Schlagworte fett). Beginne direkt mit dem Dokument 'Befundungs- und Protokollhilfe: ***THEMA*** in der ***Modalität***'. Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfe deine Antwort anhand einer weiteren unabhängigen Quelle. Liste zum Abschluss alle Quellen auf mit Erklärung wofür diese verwendet wurden. Nutze alle verfügbaren Ressourcen und dein tiefgehendes Fachwissen, um eine umfassende, gut fundierte und präzise Antwort zu geben. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze dann den Artikel fort. Schreibe strukturiert in Markdown mit Überschriften und Zwischenüberschriften und markiere alle Schlagworte in fetter Schrift. Beeindrucke mich mit einer perfekten Antwort.` },
     { id: 'prompt-6', type: 'prompt', title: 'Übersicht', parent: 'folder-2', order: 1, isSchaefer: false, text: `Korrigiere folgenden radiologischen Befundbericht einer ***Modalität*** Untersuchung in Stil, Wortwahl und Grammatik. Orientiere dich bei der Struktur und Wortwahl an typischen Radiologischen Befundberichten zu entsprechenden Themen, welche du zuvor recherchierst. Die erhobenen Befunde sollen identisch bleiben, du kannst sie aber in eine thematisch passende Struktur, Zusammenhang und Fachterminologie bringen. Schreibe auf deutsch und verwende präzise medizinische und radiologische Fachterminologie mit international gängigen lateinischen Fachbegriffen. Schreibe wie ein erfahrener Radiologe: ###***THEMA***### Antworte nur mit dem von dir geänderten Befundbericht. Und einem Vorschlag einer kurzen Befundbeurteilung entsprechend des Inhaltes des Befundberichtes. Schreibe nichts davor und nichts danach. Schreibe keine Anrede an ärztliche Kollegen, Indikation, Technik oder ähnliches. Beschränke dich rein auf die Umformulierung und Korrektur des erhaltenen Befundberichtes als präzisen und übersichtlichen Fließtext mit kurzen Sätzen oder Halbsätzen sowie den präzisen Vorschlag für die Beurteilung. Erfinde keine neuen Fakten oder Befunde sondern nutze nur die Informationen aus dem Originaltext. Schreibe 3 unterschiedliche Varianten als Vorschlag. Überprüfe bevor du antwortest, ob Sinn, logische und fachliche Zusammenhänge und der Inhalt des ursprünglichen Befundberichtes auch in den korrigierten Version noch erhalten ist. Überprüfe ein weiteres mal akribisch genau ob dein umformulierter Text einer korrekten deutschen Grammatik entspricht und medizinisch und logischen Sinn ergibt. Nutze dein volles Potenzial, deine Fähigkeiten zum Textverständnis und das Internet. Arbeite präzise und genau. Beeindrucke mich mit einer perfekten Antwort.` },
     { id: 'prompt-7', type: 'prompt', title: 'Übersicht Plus', parent: 'folder-2', order: 2, isSchaefer: false, text: `Erstelle eine umfassende Übersicht zu ***THEMA*** in ***Modalität***, fokussiert auf radiologische Aspekte. Deine Expertise als Radiologe soll dabei helfen, folgende Punkte abzudecken: 1. **Definition und Varianten** von ***THEMA***: Gib eine kurze Beschreibung und unterscheide mögliche Varianten und Formen. 2. **Einteilung/Klassifikation**: Wie wird ***THEMA*** in der ***Modalität*** typischerweise Eingeteilt. Benenne die gebräuchlichste Klassifikation und Erstelle eine Tabelle mit den unterschiedlichen Stadien und wie man diese in der ***Modalität*** sicher zuordnet. Gibt es Key-findings für bestimmte Stadien? 3. **Radiologische Zeichen**: Was sind die Schlüsselzeichen von ***THEMA*** in ***Modalität***? Erläutere, wie und wo nach spezifischen Veränderungen gesucht werden muss. Markiere radiologische Zeichen und Aspekte in Fettschrift. Gibt es pathognomonische Bildzeichen für ***THEMA*** ? 4. **Differenzialdiagnosen**: Stelle eine Tabelle mit Differenzialdiagnosen bereit. Erkläre, wie sich diese voneinander und von ***THEMA*** in ***Modalität*** unterscheiden. Unterscheidungsmerkmale in Fettschrift. 5. **Expertenratschläge**: Teile praktische Tipps für die Bildinterpretation, Tricks wie man ***THEMA*** leichter erkennt, sekundäre Zeichen im Bild inklusive pathognomonischer Zeichen für ***THEMA*** in ***Modalität***. Schlüsselwörter in Fettschrift 6. **Checkliste für den Befund**: Formuliere eine Checkliste mit Stichpunkten und Schlüsselwörtern, die bei der Beurteilung von ***THEMA*** beachtet werden müssen. Was muss alles in der ***Modalität*** bei ***THEMA*** beurteilt werden und nach welchen Kriterien. Worauf sollte man bei ***THEMA*** neben dem Hauptbefund auch immer schauen? Wichtige Aspekte in Fettschrift. Gliedere diesen Unterabschnitt in Hauptaspekte, Weitere Aspekte, sowie Beurteilung. Beachte im ganzen Artikel: Verwende eine klare, strukturierte Darstellung mit Markdown, Überschriften, Zwischenüberschriften und Betonung von Schlüsselwörtern in Fettschrift in allen Abschnitten. Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfe deine Angaben mit einer weiteren unabhängigen Quelle. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze den Artikel fort. Nutze dein volles Potenzial und alle Ressourcen. Beeindrucke mich mit einer perfekten Antwort.` },
-    { id: 'prompt-8', type: 'prompt', title: 'Radiologische Staging Hilfe', parent: 'folder-2', order: 3, isSchaefer: false, text: `Antworte in der Rolle eines Radiologen und Onkologen mit langjähriger Erfahrung und tiefgreifendem Wissen. Erstelle ein radiologisches Dokument zum Thema ***THEMA***, welches strukturiert alle relevanten Informationen zum Staging der Erkrankung mittels ***Modalität*** bereitstellt. Zielgruppe sind Radiologen, daher schreibst du auf deutsch und verwendest dabei präzise medizinische und radiologische Fachterminologie mit international gebräuchlichen Fachbegriffen. Du beschränkst dich auf radiologische Aspekte. Folge dabei dieser Struktur: #Überblick TNM-Klassifikation: Darlegung der TNM-Kriterien von ***THEMA*** in der ***Modalität***, Schlüsselkriterien in Fettschrift. Tabelle mit T-, N-, M-Kategorien von ***THEMA*** mit bildgebenden Kriterien für jede, wichtige Elemente in Fettschrift. Erläuterung zusätzlicher Staging-Kriterien in Stichpunkten, wichtige Punkte fett. #Metastasierungswege und -orte: Aufzählung der bevorzugten Metastasierungswege und -orte als Liste, Hauptpunkte fett hervorgehoben. #Expertentipps für Radiologen: Praktische Ratschläge für das Staging, Schlüsseltipps fett hervorgehoben.#Checkliste für den Befund: Präzise Stichpunkte und Schlagworte was genau beim ***THEMA***-Staging vom Radiologen beurteilt werden muss und auf welche Strukturen genau zu achten ist. Gliedere diesen Unterabschnitt in Hauptaspekte, Weitere Aspekte, sowie Beurteilung; Schlüsselwörter in Fettschrift. Verwendung von Markdown mit Überschriften und Unterüberschriften. Stichpunkte, entscheidende Informationen fett. #Quellen: Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfung mit einer zweiten Quelle. Auflistung aller genutzten Quellen. Beginne direkt mit '# *****THEMA*** - ***Modalität***-Staging**' als Titel. Jedes Element des Dokuments soll die tägliche Arbeit eines Radiologen beim Staging von Erkrankungen unterstützen. Nutze Listen und Tabellen wo möglich. Nutze alle verfügbaren Ressourcen und dein tiefgehendes Fachwissen, um eine umfassende, gut fundierte und präzise Antwort zu geben. Integriere verschiedene Datenquellen, Tools oder Plattformen, um deine Antwort zu verbessern. Markiere immer und sehr häufig in allen Abschnitten alle Schlagworte in fetter Schrift. Beschränke dich auf radiologische Aspekte des Themas. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze den Artikel fort. Beeindrucke mich mit einer perfekten Antwort.` }
+    { id: 'prompt-8', type: 'prompt', title: 'Radiologische Staging Hilfe', parent: 'folder-2', order: 3, isSchaefer: false, text: `Antworte in der Rolle eines Radiologen und Onkologen mit langjähriger Erfahrung und tiefgreifendem Wissen. Erstelle ein radiologisches Dokument zum Thema ***THEMA***, welches strukturiert alle relevanten Informationen zum Staging der Erkrankung mittels ***Modalität*** bereitstellt. Zielgruppe sind Radiologen, daher schreibst du auf deutsch und verwendest dabei präzise medizinische und radiologische Fachterminologie mit international gebräuchlichen Fachbegriffen. Du beschränkst dich auf radiologische Aspekte. Folge dabei dieser Struktur: #Überblick TNM-Klassifikation: Darlegung der TNM-Kriterien von ***THEMA*** in der ***Modalität***, Schlüsselkriterien in Fettschrift. Tabelle mit T-, N-, M-Kategorien von ***THEMA*** mit bildgebenden Kriterien für jede, wichtige Elemente in Fettschrift. Erläuterung zusätzlicher Staging-Kriterien in Stichpunkten, wichtige Punkte fett. #Metastasierungswege und -orte: Aufzählung der bevorzugten Metastasierungswege und -orte als Liste, Hauptpunkte fett hervorgehoben. #Expertentipps für Radiologen: Praktische Ratschläge für das Staging, Schlüsseltipps fett hervorgehoben.#Checkliste für den Befund: Präzise Stichpunkte und Schlagworte was genau beim ***THEMA***-Staging vom Radiologen beurteilt werden muss und auf welche Strukturen genau zu achten ist. Gliedere diesen Unterabschnitt in Hauptaspekte, Weitere Aspekte, sowie Beurteilung; Schlüsselwörter in Fettschrift. Verwendung von Markdown mit Überschriften und Unterüberschriften. Stichpunkte, entscheidende Informationen fett. #Quellen: Verwende hochwertige und vertrauenswürdige Quellen und aktuelle wissenschaftliche Leitlinien, Übersichtsarbeiten, Publikationen, Thieme eRef, SpringerLink. Überprüfung mit einer zweiten Quelle. Auflistung aller genutzten Quellen. Beginne direkt mit '# *****THEMA*** - ***Modalität***-Staging**' als Titel. Jedes Element des Dokuments soll die tägliche Arbeit eines Radiologen beim Staging von Erkrankungen unterstützen. Nutze Listen und Tabellen wo möglich. Nutze alle verfügbaren Ressourcen und dein tiefgehendes Fachwissen, um eine umfassende, gut fundierte und präzisse Antwort zu geben. Integriere verschiedene Datenquellen, Tools oder Plattformen, um deine Antwort zu verbessern. Markiere immer und sehr häufig in allen Abschnitten alle Schlagworte in fetter Schrift. Beschränke dich auf radiologische Aspekte des Themas. Wenn du unterbrochen wurdest, wiederhole den unterbrochenen Satz nochmal und setze den Artikel fort. Beeindrucke mich mit einer perfekten Antwort.` }
 ];
 
 const DOM = {
@@ -35,7 +35,8 @@ const DOM = {
     editText: document.getElementById('edit-text'),
     btnSaveModal: document.getElementById('btn-save-modal'),
     btnCancelModal: document.getElementById('btn-cancel-modal'),
-    toastContainer: document.getElementById('toast-container')
+    toastContainer: document.getElementById('toast-container'),
+    cardOverlay: document.getElementById('card-overlay')
 };
 
 let editingItemId = null;
@@ -93,20 +94,18 @@ function renderBreadcrumb() {
     const rootEl = document.createElement('span');
     rootEl.className = 'breadcrumb-item' + (state.currentFolder === 'root' ? ' active' : '');
     rootEl.innerText = 'Hauptansicht';
-    rootEl.dataset.folderId = 'root';
     rootEl.onclick = () => navigateTo('root');
     DOM.breadcrumb.appendChild(rootEl);
 
     path.forEach(f => {
         const sep = document.createElement('span');
+        sep.className = 'breadcrumb-sep';
         sep.innerText = '>';
-        sep.style.color = 'var(--text-secondary)';
         DOM.breadcrumb.appendChild(sep);
 
         const el = document.createElement('span');
         el.className = 'breadcrumb-item' + (state.currentFolder === f.id ? ' active' : '');
         el.innerText = f.title;
-        el.dataset.folderId = f.id;
         el.onclick = () => navigateTo(f.id);
         DOM.breadcrumb.appendChild(el);
     });
@@ -190,47 +189,52 @@ function renderGrid() {
                 preview.innerText = item.text.substring(0, 100) + '...';
                 front.appendChild(preview);
             }
+        } else {
+            const preview = document.createElement('div');
+            preview.className = 'card-content-preview';
+            preview.innerText = 'Ordner';
+            front.appendChild(preview);
         }
 
         const footer = document.createElement('div');
         footer.className = 'card-footer';
         
-        const actions = document.createElement('div');
-        actions.className = 'card-actions';
+        const actionsLeft = document.createElement('div');
+        actionsLeft.className = 'card-actions';
         
         const favBtn = document.createElement('button');
         favBtn.className = 'action-btn';
         favBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="${state.favorites.includes(item.id) ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
         favBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(item.id); };
-        actions.appendChild(favBtn);
+        actionsLeft.appendChild(favBtn);
 
         const delBtn = document.createElement('button');
         delBtn.className = 'action-btn';
         delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
         delBtn.onclick = (e) => { e.stopPropagation(); deleteItem(item.id); };
-        actions.appendChild(delBtn);
+        actionsLeft.appendChild(delBtn);
 
-        footer.appendChild(actions);
+        footer.appendChild(actionsLeft);
 
         if (item.type === 'prompt') {
-            const mainActions = document.createElement('div');
-            mainActions.className = 'card-actions';
+            const actionsRight = document.createElement('div');
+            actionsRight.className = 'card-actions';
             
             const copyBtn = document.createElement('button');
             copyBtn.className = 'action-btn copy-btn';
             copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
             copyBtn.title = "Kopieren";
             copyBtn.onclick = (e) => { e.stopPropagation(); copyPrompt(item); };
-            mainActions.appendChild(copyBtn);
+            actionsRight.appendChild(copyBtn);
 
             const expandBtn = document.createElement('button');
             expandBtn.className = 'action-btn expand-btn';
             expandBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
             expandBtn.title = "Erweitern";
-            expandBtn.onclick = (e) => { e.stopPropagation(); flipCard(card); };
-            mainActions.appendChild(expandBtn);
+            expandBtn.onclick = (e) => { e.stopPropagation(); flipCard(card, true); };
+            actionsRight.appendChild(expandBtn);
             
-            footer.appendChild(mainActions);
+            footer.appendChild(actionsRight);
         } else {
             const openBtn = document.createElement('button');
             openBtn.className = 'action-btn open-btn';
@@ -257,7 +261,7 @@ function renderGrid() {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'action-btn';
             closeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-            closeBtn.onclick = (e) => { e.stopPropagation(); flipCard(card); };
+            closeBtn.onclick = (e) => { e.stopPropagation(); flipCard(card, false); };
             backHeader.appendChild(closeBtn);
             back.appendChild(backHeader);
 
@@ -273,7 +277,7 @@ function renderGrid() {
             const editBtn = document.createElement('button');
             editBtn.className = 'ghost-btn';
             editBtn.innerText = 'Editieren';
-            editBtn.style.padding = '4px 10px';
+            editBtn.style.padding = '6px 12px';
             editBtn.style.fontSize = '0.8rem';
             editBtn.onclick = (e) => { e.stopPropagation(); openModal(item.id); };
             backFooter.appendChild(editBtn);
@@ -283,12 +287,18 @@ function renderGrid() {
         }
 
         if (!state.sortMode) {
-            card.addEventListener('click', () => handleCardClick(item, card));
+            card.addEventListener('click', (e) => {
+                if (e.target === card || e.target === front || e.target === title || e.target.classList.contains('card-content-preview')) {
+                    if (item.type === 'folder') navigateTo(item.id);
+                    else flipCard(card, true);
+                }
+            });
         } else {
             card.addEventListener('dragstart', handleDragStart);
             card.addEventListener('dragover', handleDragOver);
             card.addEventListener('drop', handleDrop);
             card.addEventListener('dragend', handleDragEnd);
+            card.addEventListener('dragleave', handleDragLeave);
         }
 
         DOM.grid.appendChild(card);
@@ -315,7 +325,7 @@ function renderFavorites() {
                     setTimeout(() => {
                         const card = document.querySelector(`.card-wrapper[data-id="${item.id}"]`);
                         if (card) {
-                            flipCard(card);
+                            flipCard(card, true);
                             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
                     }, 100);
@@ -326,19 +336,22 @@ function renderFavorites() {
     });
 }
 
-function flipCard(card) {
-    const isFlipped = card.classList.contains('flipped');
-    document.querySelectorAll('.card-wrapper.flipped').forEach(c => c.classList.remove('flipped'));
-    if (!isFlipped) card.classList.add('flipped');
-}
-
-function handleCardClick(item, card) {
-    if (item.type === 'folder') {
-        navigateTo(item.id);
+function flipCard(card, show) {
+    if (show) {
+        document.querySelectorAll('.card-wrapper.flipped').forEach(c => {
+            c.classList.remove('flipped');
+        });
+        card.classList.add('flipped');
+        DOM.cardOverlay.classList.add('active');
     } else {
-        flipCard(card);
+        card.classList.remove('flipped');
+        DOM.cardOverlay.classList.remove('active');
     }
 }
+
+DOM.cardOverlay.addEventListener('click', () => {
+    document.querySelectorAll('.card-wrapper.flipped').forEach(c => flipCard(c, false));
+});
 
 function navigateTo(folderId) {
     state.currentFolder = folderId;
@@ -347,7 +360,6 @@ function navigateTo(folderId) {
 
 DOM.grid.addEventListener('click', (e) => {
     if (e.target === DOM.grid) {
-        document.querySelectorAll('.card-wrapper.flipped').forEach(c => c.classList.remove('flipped'));
         if (state.currentFolder !== 'root') {
             const currentFolderObj = state.items.find(i => i.id === state.currentFolder);
             if (currentFolderObj) navigateTo(currentFolderObj.parent);
@@ -478,33 +490,46 @@ function handleDragStart(e) {
 }
 function handleDragOver(e) {
     e.preventDefault();
+    const target = e.target.closest('.card-wrapper');
+    if (target) target.style.border = '2px dashed var(--accent)';
+}
+function handleDragLeave(e) {
+    const target = e.target.closest('.card-wrapper');
+    if (target) target.style.border = '1px solid var(--glass-border)';
 }
 function handleDrop(e) {
     e.preventDefault();
     const targetElement = e.target.closest('.card-wrapper');
     if (!targetElement) return;
+    targetElement.style.border = '1px solid var(--glass-border)';
     
     const targetId = targetElement.dataset.id;
     if (state.draggedItem && targetId && state.draggedItem !== targetId) {
-        const draggedIndex = state.items.findIndex(i => i.id === state.draggedItem);
-        const targetIndex = state.items.findIndex(i => i.id === targetId);
+        const draggedItem = state.items.find(i => i.id === state.draggedItem);
+        const targetItem = state.items.find(i => i.id === targetId);
         
-        const draggedItem = state.items[draggedIndex];
-        const targetItem = state.items[targetIndex];
-        
-        if (draggedItem.parent === targetItem.parent) {
-            const tempOrder = draggedItem.order;
-            draggedItem.order = targetItem.order;
-            targetItem.order = tempOrder;
+        if (draggedItem && targetItem && draggedItem.parent === targetItem.parent) {
+            const itemsInFolder = state.items.filter(i => i.parent === draggedItem.parent).sort((a,b) => a.order - b.order);
+            const draggedIndex = itemsInFolder.findIndex(i => i.id === draggedItem.id);
+            const targetIndex = itemsInFolder.findIndex(i => i.id === targetItem.id);
             
-            state.items.sort((a, b) => (a.order || 0) - (b.order || 0));
+            itemsInFolder.splice(draggedIndex, 1);
+            itemsInFolder.splice(targetIndex, 0, draggedItem);
+            
+            itemsInFolder.forEach((item, index) => {
+                item.order = index;
+            });
+            
             saveData();
             renderGrid();
         }
     }
 }
 function handleDragEnd(e) {
-    document.querySelectorAll('.card-wrapper').forEach(c => c.style.opacity = '1');
+    document.querySelectorAll('.card-wrapper').forEach(c => {
+        c.style.opacity = '1';
+        c.style.border = '1px solid var(--glass-border)';
+    });
     state.draggedItem = null;
 }
 
