@@ -21,6 +21,7 @@ const defaultItems = [
 
 const DOM = {
     grid: document.getElementById('card-grid'),
+    emptyState: document.getElementById('empty-state'),
     breadcrumb: document.getElementById('breadcrumb'),
     folderSelector: document.getElementById('folder-selector'),
     favBar: document.getElementById('favorites-bar'),
@@ -135,6 +136,14 @@ function renderGrid() {
         .filter(i => i.parent === state.currentFolder)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 
+    if (items.length === 0) {
+        DOM.grid.appendChild(DOM.emptyState);
+        DOM.emptyState.classList.remove('hidden');
+        return;
+    } else {
+        DOM.emptyState.classList.add('hidden');
+    }
+
     items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card-wrapper';
@@ -150,21 +159,24 @@ function renderGrid() {
         front.appendChild(title);
 
         if (item.type === 'prompt') {
-            const placeholders = [...item.text.matchAll(/\*\*\*(.*?)\*\*\*/g)];
-            if (placeholders.length > 0) {
+            const rawPlaceholders = [...item.text.matchAll(/\*\*\*(.*?)\*\*\*/g)].map(m => m[1]);
+            const uniquePlaceholders = [...new Set(rawPlaceholders)];
+            
+            if (uniquePlaceholders.length > 0) {
                 const inputsContainer = document.createElement('div');
                 inputsContainer.className = 'inputs-container';
-                placeholders.forEach(p => {
-                    const varName = p[1];
+                uniquePlaceholders.forEach(varName => {
                     const group = document.createElement('div');
                     group.className = 'input-group';
                     const label = document.createElement('label');
                     label.innerText = varName;
+                    label.setAttribute('for', `input-${item.id}-${varName}`);
                     group.appendChild(label);
                     
                     if (varName === 'Modalität') {
                         const select = document.createElement('select');
                         select.className = 'custom-select';
+                        select.id = `input-${item.id}-${varName}`;
                         select.dataset.placeholder = varName;
                         ['CT', 'MRT', 'Röntgen', 'CT&MRT'].forEach(opt => {
                             const o = document.createElement('option');
@@ -177,6 +189,7 @@ function renderGrid() {
                         const input = document.createElement('input');
                         input.type = 'text';
                         input.className = 'text-input';
+                        input.id = `input-${item.id}-${varName}`;
                         input.dataset.placeholder = varName;
                         group.appendChild(input);
                     }
@@ -204,12 +217,21 @@ function renderGrid() {
         
         const favBtn = document.createElement('button');
         favBtn.className = 'action-btn';
+        favBtn.setAttribute('aria-label', 'Als Favorit markieren');
         favBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="${state.favorites.includes(item.id) ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
         favBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(item.id); };
         actionsLeft.appendChild(favBtn);
 
+        const editBtn = document.createElement('button');
+        editBtn.className = 'action-btn';
+        editBtn.setAttribute('aria-label', 'Editieren');
+        editBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+        editBtn.onclick = (e) => { e.stopPropagation(); openModal(item.id); };
+        actionsLeft.appendChild(editBtn);
+
         const delBtn = document.createElement('button');
         delBtn.className = 'action-btn';
+        delBtn.setAttribute('aria-label', 'Löschen');
         delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
         delBtn.onclick = (e) => { e.stopPropagation(); deleteItem(item.id); };
         actionsLeft.appendChild(delBtn);
@@ -222,15 +244,15 @@ function renderGrid() {
             
             const copyBtn = document.createElement('button');
             copyBtn.className = 'action-btn copy-btn';
+            copyBtn.setAttribute('aria-label', 'Prompt kopieren');
             copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-            copyBtn.title = "Kopieren";
             copyBtn.onclick = (e) => { e.stopPropagation(); copyPrompt(item); };
             actionsRight.appendChild(copyBtn);
 
             const expandBtn = document.createElement('button');
             expandBtn.className = 'action-btn expand-btn';
+            expandBtn.setAttribute('aria-label', 'Karte erweitern');
             expandBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
-            expandBtn.title = "Erweitern";
             expandBtn.onclick = (e) => { e.stopPropagation(); flipCard(card, true); };
             actionsRight.appendChild(expandBtn);
             
@@ -238,6 +260,7 @@ function renderGrid() {
         } else {
             const openBtn = document.createElement('button');
             openBtn.className = 'action-btn open-btn';
+            openBtn.setAttribute('aria-label', 'Ordner öffnen');
             openBtn.innerHTML = `Öffnen <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
             openBtn.onclick = (e) => { e.stopPropagation(); navigateTo(item.id); };
             footer.appendChild(openBtn);
@@ -260,6 +283,7 @@ function renderGrid() {
 
             const closeBtn = document.createElement('button');
             closeBtn.className = 'action-btn';
+            closeBtn.setAttribute('aria-label', 'Karte schließen');
             closeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
             closeBtn.onclick = (e) => { e.stopPropagation(); flipCard(card, false); };
             backHeader.appendChild(closeBtn);
@@ -274,13 +298,14 @@ function renderGrid() {
             backFooter.className = 'card-footer';
             backFooter.style.justifyContent = 'space-between';
 
-            const editBtn = document.createElement('button');
-            editBtn.className = 'ghost-btn';
-            editBtn.innerText = 'Editieren';
-            editBtn.style.padding = '6px 12px';
-            editBtn.style.fontSize = '0.8rem';
-            editBtn.onclick = (e) => { e.stopPropagation(); openModal(item.id); };
-            backFooter.appendChild(editBtn);
+            const editBtnBack = document.createElement('button');
+            editBtnBack.className = 'ghost-btn';
+            editBtnBack.innerText = 'Editieren';
+            editBtnBack.setAttribute('aria-label', 'Prompt editieren');
+            editBtnBack.style.padding = '6px 12px';
+            editBtnBack.style.fontSize = '0.8rem';
+            editBtnBack.onclick = (e) => { e.stopPropagation(); openModal(item.id); };
+            backFooter.appendChild(editBtnBack);
 
             back.appendChild(backFooter);
             card.appendChild(back);
@@ -288,10 +313,8 @@ function renderGrid() {
 
         if (!state.sortMode) {
             card.addEventListener('click', (e) => {
-                if (e.target === card || e.target === front || e.target === title || e.target.classList.contains('card-content-preview')) {
-                    if (item.type === 'folder') navigateTo(item.id);
-                    else flipCard(card, true);
-                }
+                if (e.target.closest('.action-btn') || e.target.closest('.input-group') || e.target.closest('.text-input') || e.target.closest('.custom-select') || e.target.closest('label')) return;
+                if (item.type === 'folder') navigateTo(item.id);
             });
         } else {
             card.addEventListener('dragstart', handleDragStart);
@@ -359,7 +382,7 @@ function navigateTo(folderId) {
 }
 
 DOM.grid.addEventListener('click', (e) => {
-    if (e.target === DOM.grid) {
+    if (e.target === DOM.grid || e.target === DOM.emptyState) {
         if (state.currentFolder !== 'root') {
             const currentFolderObj = state.items.find(i => i.id === state.currentFolder);
             if (currentFolderObj) navigateTo(currentFolderObj.parent);
@@ -378,12 +401,12 @@ function toggleFavorite(id) {
 
 async function copyPrompt(item) {
     let textToCopy = item.text;
-    const placeholders = [...item.text.matchAll(/\*\*\*(.*?)\*\*\*/g)];
+    const rawPlaceholders = [...item.text.matchAll(/\*\*\*(.*?)\*\*\*/g)].map(m => m[1]);
+    const uniquePlaceholders = [...new Set(rawPlaceholders)];
     
-    if (placeholders.length > 0) {
+    if (uniquePlaceholders.length > 0) {
         const card = document.querySelector(`.card-wrapper[data-id="${item.id}"]`);
-        placeholders.forEach(p => {
-            const varName = p[1];
+        uniquePlaceholders.forEach(varName => {
             const input = card.querySelector(`[data-placeholder="${varName}"]`);
             if (input) {
                 const regex = new RegExp(`\\*\\*\\*${varName}\\*\\*\\*`, 'g');

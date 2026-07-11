@@ -185,6 +185,11 @@ body {
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
 }
 
+.control-btn:focus-visible, .action-btn:focus-visible, .primary-btn:focus-visible, .ghost-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 #folder-selector-container {
     padding: 12px 24px;
     border-bottom: 1px solid var(--glass-border);
@@ -232,18 +237,66 @@ body {
     gap: 16px;
     align-content: start;
     perspective: 1200px;
+    position: relative;
 }
 
 #card-grid::-webkit-scrollbar { width: 6px; }
 #card-grid::-webkit-scrollbar-track { background: transparent; }
 #card-grid::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
 
+#empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    text-align: center;
+    gap: 12px;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+#empty-state.hidden {
+    display: none;
+}
+
+#empty-state svg {
+    stroke: var(--text-secondary);
+}
+
+#empty-state h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+#empty-state p {
+    font-size: 0.85rem;
+    max-width: 300px;
+}
+
 .card-wrapper {
     aspect-ratio: 1 / 1;
     position: relative;
     transform-style: preserve-3d;
     transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-    cursor: pointer;
+    cursor: default;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.card-wrapper[draggable="true"] {
+    touch-action: none;
+    cursor: grab;
+}
+
+.card-wrapper[draggable="true"]:active {
+    cursor: grabbing;
 }
 
 .card-wrapper.flipped {
@@ -251,9 +304,10 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotateY(180deg) scale(1);
-    width: 340px;
-    height: 340px;
+    width: min(90vw, 400px);
+    height: min(90vw, 400px);
     z-index: 1001;
+    animation: none;
 }
 
 .card-face {
@@ -275,8 +329,7 @@ body {
 
 .card-wrapper:not(.flipped):hover .card-face {
     border-color: var(--glass-border-hover);
-    box-shadow: var(--shadow-md), 0 0 0 1px var(--glass-border-hover);
-    transform: translateY(-2px);
+    box-shadow: var(--shadow-md), 0 0 0 1px var(--glass-border-hover), 0 0 20px rgba(59, 130, 246, 0.1);
 }
 
 .card-front {
@@ -301,6 +354,7 @@ body {
     word-break: break-word;
     line-height: 1.3;
     margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .card-content-preview {
@@ -322,10 +376,10 @@ body {
     flex-direction: column;
     gap: 8px;
     padding-right: 4px;
+    scrollbar-width: none;
 }
 
-.inputs-container::-webkit-scrollbar { width: 4px; }
-.inputs-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.inputs-container::-webkit-scrollbar { display: none; }
 
 .card-footer {
     display: flex;
@@ -334,11 +388,13 @@ body {
     gap: 8px;
     border-top: 1px solid rgba(255,255,255,0.05);
     padding-top: 8px;
+    flex-shrink: 0;
 }
 
 .card-actions {
     display: flex;
     gap: 4px;
+    align-items: center;
 }
 
 .action-btn {
@@ -379,6 +435,7 @@ body {
     margin-bottom: 12px;
     border-bottom: 1px solid var(--glass-border);
     padding-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .card-full-text {
@@ -390,14 +447,13 @@ body {
     white-space: pre-wrap;
     word-break: break-word;
     margin-bottom: 12px;
-    scrollbar-width: thin;
+    scrollbar-width: none;
     background: rgba(0,0,0,0.2);
     padding: 8px;
     border-radius: 6px;
 }
 
-.card-full-text::-webkit-scrollbar { width: 4px; }
-.card-full-text::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.card-full-text::-webkit-scrollbar { display: none; }
 
 .input-group {
     display: flex;
@@ -655,8 +711,8 @@ body {
     .card-wrapper.flipped {
         width: 90vw;
         height: 90vw;
-        max-width: 340px;
-        max-height: 340px;
+        max-width: 400px;
+        max-height: 400px;
     }
     #controls span {
         display: none;
