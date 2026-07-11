@@ -13,6 +13,7 @@ const App = {
 
 App.init = function() {
     this.elements = {
+        preloader: document.getElementById('preloader'),
         appTitle: document.getElementById('app-title'),
         backBtn: document.getElementById('back-btn'),
         breadcrumb: document.getElementById('breadcrumb'),
@@ -29,13 +30,16 @@ App.init = function() {
     this.bindEvents();
     this.loadData().then(() => {
         this.render();
+        setTimeout(() => {
+            this.elements.preloader.classList.add('loaded');
+        }, 300);
     });
 };
 
 App.bindEvents = function() {
     this.elements.backBtn.addEventListener('click', () => this.navigateBack());
     this.elements.cardsContainer.addEventListener('click', (e) => {
-        if (e.target === this.elements.cardsContainer) {
+        if (e.target === this.elements.cardsContainer || e.target.classList.contains('empty-state')) {
             this.navigateBack();
         }
     });
@@ -105,7 +109,11 @@ App.render = function() {
     this.elements.backBtn.classList.toggle('hidden', this.state.currentPath.length === 1);
 
     if (!node.children || node.children.length === 0) {
-        this.elements.cardsContainer.innerHTML = `<div class="empty-state w-full h-full flex items-center justify-center text-gray-500 text-sm">Ordner ist leer. Klicke auf einen freien Bereich, um zurückzugehen.</div>`;
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.innerHTML = `<div>Ordner ist leer.</div><div style="font-size: 0.8rem; opacity: 0.7;">Klicke auf einen freien Bereich, um zurückzugehen.</div>`;
+        this.elements.cardsContainer.appendChild(emptyState);
+        this.initSortable();
         return;
     }
 
@@ -129,7 +137,7 @@ App.renderBreadcrumb = function() {
         if (index > 0) {
             const sep = document.createElement('span');
             sep.textContent = '/';
-            sep.className = 'text-gray-600';
+            sep.className = 'breadcrumb-sep';
             this.elements.breadcrumb.appendChild(sep);
         }
         const span = document.createElement('span');
@@ -201,6 +209,7 @@ App.createCard = function(item) {
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'btn-icon-sm';
+        copyBtn.style.cssText = 'position: absolute; bottom: 1rem; left: 1rem; color: var(--text-muted);';
         copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
         copyBtn.title = 'Prompt kopieren';
         copyBtn.addEventListener('click', (e) => {
@@ -211,7 +220,7 @@ App.createCard = function(item) {
     } else if (item.type === 'folder') {
         const folderIcon = document.createElement('div');
         folderIcon.className = 'folder-icon';
-        folderIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); margin: auto 0;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+        folderIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
         front.appendChild(folderIcon);
     }
 
@@ -226,14 +235,11 @@ App.createCard = function(item) {
 
     const favBtn = document.createElement('button');
     favBtn.className = 'btn-icon-sm fav-btn';
-    favBtn.style.position = 'absolute';
-    favBtn.style.top = '0.5rem';
-    favBtn.style.right = '0.5rem';
+    if (this.state.favorites.includes(item.id)) favBtn.classList.add('active');
     favBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="${this.state.favorites.includes(item.id) ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
     favBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.toggleFavorite(item.id);
-        this.render();
+        this.toggleFavorite(item.id, favBtn);
     });
     front.appendChild(favBtn);
 
@@ -295,7 +301,7 @@ App.createCard = function(item) {
 
     if (item.type === 'folder' && !this.state.isSorting) {
         card.addEventListener('click', (e) => {
-            if (e.target.closest('button')) return;
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
             this.state.currentPath.push(item.id);
             this.render();
         });
@@ -322,44 +328,49 @@ App.copyPrompt = async function(item, cardEl) {
 
     try {
         if (item.isSchaefer) {
-            const promptBlob = new Blob([text], { type: 'text/plain' });
-            const ctBlob = new Blob([schaeferCTText], { type: 'text/plain' });
-            const mrtBlob = new Blob([schaeferMRTText], { type: 'text/plain' });
-            
-            const clipboardItems = [
-                new ClipboardItem({ 'text/plain': promptBlob })
-            ];
-            
-            try {
-                clipboardItems.push(new ClipboardItem({ 'text/plain': ctBlob }));
-                clipboardItems.push(new ClipboardItem({ 'text/plain': mrtBlob }));
-                await navigator.clipboard.write(clipboardItems);
-            } catch (err) {
-                await navigator.clipboard.writeText(text + "\n\n" + schaeferCTText + "\n\n" + schaeferMRTText);
-            }
+            const combinedText = `${text}\n\n${schaeferCTText}\n\n${schaeferMRTText}`;
+            await navigator.clipboard.writeText(combinedText);
+            this.showToast('Prompt + Schäfer Beispiele kopiert!', 'success');
         } else {
             await navigator.clipboard.writeText(text);
+            this.showToast('Prompt erfolgreich kopiert!', 'success');
         }
-        this.showToast('Prompt erfolgreich kopiert!', 'success');
     } catch (err) {
-        this.showToast('Kopieren fehlgeschlagen.', 'error');
+        const textArea = document.createElement('textarea');
+        textArea.value = item.isSchaefer ? `${text}\n\n${schaeferCTText}\n\n${schaeferMRTText}` : text;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            this.showToast('Prompt erfolgreich kopiert!', 'success');
+        } catch (execErr) {
+            this.showToast('Kopieren fehlgeschlagen.', 'error');
+        }
+        document.body.removeChild(textArea);
     }
 };
 
-App.toggleFavorite = function(id) {
+App.toggleFavorite = function(id, btnEl) {
     const index = this.state.favorites.indexOf(id);
+    const svg = btnEl.querySelector('svg');
     if (index > -1) {
         this.state.favorites.splice(index, 1);
+        btnEl.classList.remove('active');
+        svg.setAttribute('fill', 'none');
     } else {
         this.state.favorites.push(id);
+        btnEl.classList.add('active');
+        svg.setAttribute('fill', 'var(--accent)');
     }
+    this.renderFavorites();
     this.saveData();
 };
 
 App.renderFavorites = function() {
     this.elements.favoritesContainer.innerHTML = '';
     if (this.state.favorites.length === 0) {
-        this.elements.favoritesContainer.innerHTML = `<span class="text-gray-600 text-xs">Keine Favoriten markiert</span>`;
+        this.elements.favoritesContainer.innerHTML = `<span style="color: var(--text-muted); font-size: 0.8rem;">Keine Favoriten markiert</span>`;
         return;
     }
     this.state.favorites.forEach(id => {
@@ -373,7 +384,6 @@ App.renderFavorites = function() {
                     const cardEl = this.createCard(item);
                     this.copyPrompt(item, cardEl);
                 } else {
-                    this.state.currentPath = ['root'];
                     this.navigateIntoFolder(id);
                 }
             });
@@ -383,7 +393,6 @@ App.renderFavorites = function() {
 };
 
 App.navigateIntoFolder = function(id) {
-    const path = ['root'];
     const findPath = (node, target, currentPath) => {
         if (node.id === target) return [...currentPath, node.id];
         if (!node.children) return null;
@@ -423,7 +432,10 @@ App.initSortable = function() {
         ghostClass: 'sortable-ghost',
         dragClass: 'sortable-drag',
         disabled: !this.state.isSorting,
+        filter: '.btn-icon-sm, .expand-btn, .card-input, .card-select, .card-text',
+        preventOnFilter: false,
         onEnd: (evt) => {
+            if (evt.oldIndex === evt.newIndex) return;
             const node = this.getCurrentNode();
             const movedItem = node.children.splice(evt.oldIndex, 1)[0];
             node.children.splice(evt.newIndex, 0, movedItem);
@@ -444,7 +456,7 @@ App.openModal = function(type, item = null) {
         <div class="modal-body">
             <div class="form-group">
                 <label class="form-label">Titel</label>
-                <input type="text" id="modal-title-input" class="form-input" value="${isEdit ? item.title : ''}">
+                <input type="text" id="modal-title-input" class="form-input" value="${isEdit ? item.title.replace(/"/g, '&quot;') : ''}">
             </div>
             ${type === 'prompt' ? `
             <div class="form-group">

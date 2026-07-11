@@ -2,16 +2,26 @@
 <html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="RadPrompt - Kompaktes Schnellzugriffsboard für radiologische KI-Prompts.">
+    <meta name="theme-color" content="#050507">
     <title>RadPrompt</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <div id="preloader" class="preloader">
+        <div class="preloader-spinner"></div>
+    </div>
 
     <div id="background-effects" class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div class="orb orb-1"></div>
@@ -19,41 +29,42 @@
         <div class="orb orb-3"></div>
     </div>
 
-    <div id="radprompt-app" class="widget-container fixed inset-0 z-10 flex flex-col p-4 md:p-6 lg:p-8">
+    <div class="noise-overlay fixed inset-0 z-1 pointer-events-none"></div>
+
+    <div id="radprompt-app" class="widget-container">
         
-        <header class="widget-header flex items-center justify-between mb-4 px-2 md:px-4">
-            <div class="header-left flex items-center gap-3 md:gap-4">
-                <button id="back-btn" class="icon-btn hidden">
+        <header class="widget-header">
+            <div class="header-left">
+                <button id="back-btn" class="icon-btn hidden" aria-label="Zurück">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
-                <h1 id="app-title" class="text-xl md:text-2xl font-semibold tracking-wide text-gray-100 select-none">RadPrompt</h1>
-                <div id="breadcrumb" class="breadcrumb text-sm text-gray-400 hidden md:flex items-center gap-2"></div>
+                <h1 id="app-title" class="select-none">RadPrompt</h1>
+                <div id="breadcrumb" class="breadcrumb hidden md:flex items-center gap-2"></div>
             </div>
-            <div class="header-right flex items-center gap-2 md:gap-3">
-                <button id="add-prompt-btn" class="action-btn">
+            <div class="header-right">
+                <button id="add-prompt-btn" class="action-btn" aria-label="Prompt hinzufügen">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                     <span>Prompt</span>
                 </button>
-                <button id="add-folder-btn" class="action-btn">
+                <button id="add-folder-btn" class="action-btn" aria-label="Ordner hinzufügen">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
                     <span>Ordner</span>
                 </button>
-                <button id="sort-btn" class="icon-btn">
+                <button id="sort-btn" class="icon-btn" aria-label="Sortiermodus umschalten">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4M7 20V4M11 4h10M11 8h7M11 12h4"/></svg>
                 </button>
             </div>
         </header>
 
-        <main id="cards-container" class="cards-grid flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1 md:pr-2">
-        </main>
+        <main id="cards-container" class="cards-grid custom-scrollbar"></main>
 
-        <footer class="widget-footer mt-4">
+        <footer class="widget-footer">
             <div id="favorites-bar" class="favorites-bar">
                 <div class="favorites-label">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     <span>Favoriten</span>
                 </div>
-                <div id="favorites-container" class="favorites-list flex-1 flex items-center gap-2 overflow-x-auto custom-scrollbar-horizontal"></div>
+                <div id="favorites-container" class="favorites-list custom-scrollbar-horizontal"></div>
             </div>
         </footer>
 

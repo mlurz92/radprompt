@@ -341,7 +341,7 @@ Für jede Läsion dokumentieren:
   Kapseldurchbruch, Faszien-/Kompartimentüberschreitung.
 * Umgebungsreaktion: Ödem, Knochenmarködem, Erguss, Fettgewebsimbibierung, Stranding.
 
-## PHASE 4 — MUSTERERKENNTUNG & PFLICHT-BEGLEITBEFUNDSUCHE
+## PHASE 4 — MUSTERERKENNTNUNG & PFLICHT-BEGLEITBEFUNDSUCHE
 
 * Ordne den Hauptbefund einem Verletzungs-/Erkrankungsmuster zu und suche AKTIV die
   typischen Begleitbefunde dieses Musters, z. B.:
