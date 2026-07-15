@@ -1,0 +1,19 @@
+{
+  "name": "RadPrompt",
+  "short_name": "RadPrompt",
+  "description": "Rahmenlos optimiertes Schnellzugriffsboard für radiologische KI-Prompts.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#050507",
+  "theme_color": "#050507",
+  "orientation": "any",
+  "categories": ["productivity", "medical", "utilities"],
+  "icons": [
+    { "src": "assets/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "RadPrompt öffnen", "short_name": "Home", "url": "/?source=pwa", "description": "Prompt-Board öffnen" }
+  ]
+}

@@ -7,8 +7,7 @@ const App = {
         favorites: [],
         isSorting: false,
         contextItemId: null,
-        isPinned: false,
-        pipWindow: null
+        isFocusMode: localStorage.getItem('radprompt_focus_mode') === 'true'
     },
     elements: {},
     sortableInstance: null
@@ -35,6 +34,8 @@ App.init = function() {
 
     this.bindEvents();
     this.loadData().then(() => {
+        this.applyFocusMode();
+        this.registerServiceWorker();
         this.render();
         setTimeout(() => {
             this.elements.preloader.classList.add('loaded');
@@ -52,7 +53,7 @@ App.bindEvents = function() {
     this.elements.addPromptBtn.addEventListener('click', () => this.openModal('prompt'));
     this.elements.addFolderBtn.addEventListener('click', () => this.openModal('folder'));
     this.elements.sortBtn.addEventListener('click', () => this.toggleSortMode());
-    this.elements.pinWindowBtn.addEventListener('click', () => this.togglePinnedWindow());
+    this.elements.pinWindowBtn.addEventListener('click', () => this.toggleFocusMode());
     document.addEventListener('click', () => this.closeContextMenu());
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -260,8 +261,13 @@ App.createCard = function(item) {
     } else if (item.type === 'folder') {
         const folderIcon = document.createElement('div');
         folderIcon.className = 'folder-icon';
-        folderIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+        folderIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
         front.appendChild(folderIcon);
+
+        const folderMeta = document.createElement('div');
+        folderMeta.className = 'folder-meta';
+        folderMeta.textContent = `${item.children.length} Element${item.children.length === 1 ? '' : 'e'}`;
+        front.appendChild(folderMeta);
     }
 
     const expandBtn = document.createElement('button');
@@ -495,70 +501,27 @@ App.unflipCards = function(root = document) {
     root.querySelectorAll('.card.flipped').forEach(card => card.classList.remove('flipped'));
 };
 
-App.togglePinnedWindow = async function() {
-    if (this.state.isPinned) {
-        this.closePinnedWindow();
-        return;
-    }
+App.toggleFocusMode = function() {
+    this.state.isFocusMode = !this.state.isFocusMode;
+    localStorage.setItem('radprompt_focus_mode', String(this.state.isFocusMode));
+    this.applyFocusMode();
+    this.showToast(this.state.isFocusMode ? 'Rahmenloser Fokusmodus aktiviert.' : 'Fokusmodus deaktiviert.', 'success');
+};
 
-    if (!('documentPictureInPicture' in window)) {
-        this.showToast('Immer-im-Vordergrund wird von diesem Browser nicht unterstützt.', 'error');
-        return;
-    }
+App.applyFocusMode = function() {
+    document.body.classList.toggle('focus-mode', this.state.isFocusMode);
+    this.elements.pinWindowBtn.classList.toggle('active', this.state.isFocusMode);
+    this.elements.pinWindowBtn.setAttribute('aria-pressed', String(this.state.isFocusMode));
+    this.elements.pinWindowBtn.title = this.state.isFocusMode ? 'Fokusmodus deaktivieren' : 'Rahmenlosen Fokusmodus aktivieren';
+};
 
-    try {
-        const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 520, height: 760 });
-        this.state.pipWindow = pipWindow;
-        this.state.isPinned = true;
-        this.elements.pinWindowBtn.classList.add('active');
-        this.copyStylesToPinnedWindow(pipWindow);
-        pipWindow.document.body.className = 'pip-body';
-        pipWindow.document.body.appendChild(this.elements.appHost);
-        pipWindow.document.addEventListener('click', () => this.closeContextMenu());
-        pipWindow.document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                this.closeContextMenu();
-                this.closeModal();
-                this.unflipCards(pipWindow.document);
-            }
+App.registerServiceWorker = function() {
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            console.warn('Service Worker registration failed.');
         });
-        pipWindow.addEventListener('pagehide', () => this.restoreFromPinnedWindow(), { once: true });
-        this.showToast('RadPrompt bleibt jetzt im Vordergrund.', 'success');
-    } catch (error) {
-        this.state.isPinned = false;
-        this.state.pipWindow = null;
-        this.elements.pinWindowBtn.classList.remove('active');
-        this.showToast('Vordergrundmodus konnte nicht gestartet werden.', 'error');
-    }
-};
-
-App.copyStylesToPinnedWindow = function(pipWindow) {
-    [...document.querySelectorAll('link[rel="stylesheet"], style')].forEach(node => {
-        pipWindow.document.head.appendChild(node.cloneNode(true));
     });
-    const meta = pipWindow.document.createElement('meta');
-    meta.name = 'viewport';
-    meta.content = 'width=device-width, initial-scale=1.0';
-    pipWindow.document.head.appendChild(meta);
-    pipWindow.document.title = 'RadPrompt · Vordergrund';
-};
-
-App.closePinnedWindow = function() {
-    const pipWindow = this.state.pipWindow;
-    this.restoreFromPinnedWindow();
-    if (pipWindow && !pipWindow.closed) {
-        pipWindow.close();
-    }
-};
-
-App.restoreFromPinnedWindow = function() {
-    const anchor = document.querySelector('script[src="data.js"]') || document.body.firstChild;
-    if (!document.body.contains(this.elements.appHost)) {
-        document.body.insertBefore(this.elements.appHost, anchor);
-    }
-    this.state.isPinned = false;
-    this.state.pipWindow = null;
-    this.elements.pinWindowBtn.classList.remove('active');
 };
 
 App.openContextMenu = function(event, item, cardEl) {
