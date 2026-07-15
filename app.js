@@ -7,6 +7,7 @@ const App = {
         favorites: [],
         favoritesAutoHideTimer: null,
         pipWindow: null,
+        pinnedPlaceholder: null,
         isSorting: false,
         contextItemId: null,
         isFocusMode: localStorage.getItem('radprompt_focus_mode') === 'true',
@@ -110,13 +111,18 @@ App.loadData = async function() {
         const localData = localStorage.getItem('radprompt_data');
         const localFavs = localStorage.getItem('radprompt_favorites');
         if (localData) {
-            this.state.data = JSON.parse(localData);
-            this.state.favorites = localFavs ? JSON.parse(localFavs) : [];
-        } else {
-            this.state.data = initialData;
-            this.state.favorites = [];
-            this.saveData();
+            try {
+                this.state.data = JSON.parse(localData);
+                this.state.favorites = localFavs ? JSON.parse(localFavs) : [];
+                return;
+            } catch (parseError) {
+                console.warn('Local RadPrompt data is invalid, resetting to defaults.', parseError);
+            }
         }
+
+        this.state.data = this.cloneData(initialData);
+        this.state.favorites = [];
+        this.saveData();
     }
 };
 
@@ -181,6 +187,7 @@ App.updateCardScale = function() {
 
     const cards = container.querySelectorAll('.card');
     if (cards.length === 0) {
+        container.style.removeProperty('--dynamic-card-columns');
         container.style.removeProperty('--dynamic-card-size');
         return;
     }
@@ -189,18 +196,22 @@ App.updateCardScale = function() {
     const gap = parseFloat(styles.columnGap || styles.gap) || 0;
     const width = container.clientWidth - parseFloat(styles.paddingLeft || 0) - parseFloat(styles.paddingRight || 0);
     const height = container.clientHeight - parseFloat(styles.paddingTop || 0) - parseFloat(styles.paddingBottom || 0);
-    const columns = window.matchMedia('(max-width: 420px)').matches ? 2 : 3;
+    const minimumColumns = 3;
+    const maxComfortableCardSize = 240;
+    const widthPreferredColumns = Math.ceil((width + gap) / (maxComfortableCardSize + gap));
+    const columns = Math.max(minimumColumns, Math.min(cards.length || minimumColumns, widthPreferredColumns));
     const rows = Math.max(1, Math.ceil(cards.length / columns));
     const widthBound = (width - gap * (columns - 1)) / columns;
     const heightBound = (height - gap * (rows - 1)) / rows;
     const nextSize = Math.max(48, Math.floor(Math.min(widthBound, heightBound)));
 
+    container.style.setProperty('--dynamic-card-columns', String(columns));
     container.style.setProperty('--dynamic-card-size', `${nextSize}px`);
 };
 
 App.animateCardsIn = function() {
     if (window.gsap) {
-        gsap.fromTo('.card',
+        gsap.fromTo(this.elements.cardsContainer.querySelectorAll('.card'),
             { opacity: 0, y: 20, scale: 0.95 },
             { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.03, ease: 'power2.out' }
         );
@@ -233,7 +244,8 @@ App.renderBreadcrumb = function() {
         }
         const span = document.createElement('span');
         span.className = 'breadcrumb-item';
-        span.textContent = id === 'root' ? 'Home' : this.findNodeById(id).title;
+        const breadcrumbNode = id === 'root' ? null : this.findNodeById(id);
+        span.textContent = id === 'root' ? 'Home' : (breadcrumbNode ? breadcrumbNode.title : 'Unbekannt');
         span.addEventListener('click', () => {
             this.state.currentPath = this.state.currentPath.slice(0, index + 1);
             this.render();
@@ -251,6 +263,24 @@ App.findNodeById = function(id, node = this.state.data) {
     }
     return null;
 };
+
+App.escapeHtml = function(value = '') {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+};
+
+App.cloneData = function(value) {
+    if (typeof structuredClone === 'function') {
+        return structuredClone(value);
+    }
+    return JSON.parse(JSON.stringify(value));
+};
+
+
 
 App.createCard = function(item) {
     const card = document.createElement('div');
@@ -437,7 +467,8 @@ App.copyPrompt = async function(item, cardEl) {
     } catch (err) {
         const textArea = document.createElement('textarea');
         textArea.value = item.isSchaefer ? `${text}\n\n${schaeferCTText}\n\n${schaeferMRTText}` : text;
-        document.body.appendChild(textArea);
+        const doc = cardEl.ownerDocument || document;
+        doc.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
         try {
@@ -446,7 +477,7 @@ App.copyPrompt = async function(item, cardEl) {
         } catch (execErr) {
             this.showToast('Kopieren fehlgeschlagen.', 'error');
         }
-        document.body.removeChild(textArea);
+        textArea.remove();
     }
 };
 
@@ -518,7 +549,7 @@ App.navigateBack = function() {
 App.toggleSortMode = function() {
     this.state.isSorting = !this.state.isSorting;
     this.elements.sortBtn.classList.toggle('active', this.state.isSorting);
-    document.querySelectorAll('.card').forEach(c => {
+    this.elements.cardsContainer.querySelectorAll('.card').forEach(c => {
         c.draggable = this.state.isSorting;
         c.classList.toggle('sorting', this.state.isSorting);
     });
@@ -596,6 +627,7 @@ App.openPinnedPictureInPicture = async function() {
     localStorage.setItem('radprompt_focus_mode', 'true');
 
     this.preparePinnedWindow(pipWindow);
+    this.showPinnedPlaceholder();
     pipWindow.document.body.appendChild(this.elements.appHost);
     this.applyFocusMode();
     this.updateCardScale();
@@ -604,6 +636,7 @@ App.openPinnedPictureInPicture = async function() {
 
     pipWindow.addEventListener('pagehide', () => {
         document.body.appendChild(this.elements.appHost);
+        this.hidePinnedPlaceholder();
         this.state.pipWindow = null;
         this.state.isFocusMode = false;
         localStorage.setItem('radprompt_focus_mode', 'false');
@@ -626,6 +659,34 @@ App.preparePinnedWindow = function(pipWindow) {
     });
 
     pipWindow.document.body.className = `${document.body.className} pip-body`.trim();
+    pipWindow.document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            this.closeContextMenu();
+            this.closeModal();
+            this.unflipCards(pipWindow.document);
+        }
+    });
+};
+
+App.showPinnedPlaceholder = function() {
+    this.hidePinnedPlaceholder();
+    const placeholder = document.createElement('div');
+    placeholder.className = 'pinned-opener-placeholder';
+    placeholder.innerHTML = `
+        <div class="pinned-opener-card">
+            <strong>RadPrompt ist angepinnt</strong>
+            <span>Die Arbeitsoberfläche läuft im Vordergrundfenster. Schließe das angepinnte Fenster oder nutze dort den Pin-Button, um hierher zurückzukehren.</span>
+        </div>
+    `;
+    document.body.appendChild(placeholder);
+    this.state.pinnedPlaceholder = placeholder;
+};
+
+App.hidePinnedPlaceholder = function() {
+    if (this.state.pinnedPlaceholder) {
+        this.state.pinnedPlaceholder.remove();
+        this.state.pinnedPlaceholder = null;
+    }
 };
 
 App.applyFocusMode = function() {
@@ -672,8 +733,9 @@ App.openContextMenu = function(event, item, cardEl) {
     });
     this.elements.contextMenu.classList.remove('hidden');
     const rect = this.elements.contextMenu.getBoundingClientRect();
-    const left = Math.min(event.clientX, window.innerWidth - rect.width - 12);
-    const top = Math.min(event.clientY, window.innerHeight - rect.height - 12);
+    const view = event.view || this.elements.contextMenu.ownerDocument.defaultView || window;
+    const left = Math.min(event.clientX, view.innerWidth - rect.width - 12);
+    const top = Math.min(event.clientY, view.innerHeight - rect.height - 12);
     this.elements.contextMenu.style.left = `${Math.max(12, left)}px`;
     this.elements.contextMenu.style.top = `${Math.max(12, top)}px`;
     this.animateContextMenuIn();
@@ -707,12 +769,12 @@ App.openModal = function(type, item = null) {
         <div class="modal-body">
             <div class="form-group">
                 <label class="form-label">Titel</label>
-                <input type="text" id="modal-title-input" class="form-input" value="${isEdit ? item.title.replace(/"/g, '&quot;') : ''}">
+                <input type="text" id="modal-title-input" class="form-input" value="${isEdit ? this.escapeHtml(item.title) : ''}">
             </div>
             ${type === 'prompt' ? `
             <div class="form-group">
                 <label class="form-label">Prompt-Text (Platzhalter: ***Name***)</label>
-                <textarea id="modal-text-input" class="form-textarea">${isEdit ? item.text : ''}</textarea>
+                <textarea id="modal-text-input" class="form-textarea">${isEdit ? this.escapeHtml(item.text) : ''}</textarea>
             </div>
             <div class="form-group">
                 <label class="form-label">Prof. Schäfer Prompt (Kopiert zusätzlich CT/MRT Texte)</label>
@@ -732,17 +794,18 @@ App.openModal = function(type, item = null) {
     this.elements.modalOverlay.classList.remove('hidden');
     this.elements.modalOverlay.classList.add('flex');
 
-    document.getElementById('modal-close-btn').addEventListener('click', () => this.closeModal());
-    document.getElementById('modal-cancel-btn').addEventListener('click', () => this.closeModal());
-    document.getElementById('modal-save-btn').addEventListener('click', () => {
-        const title = document.getElementById('modal-title-input').value.trim();
+    const modalDoc = this.elements.modalOverlay.ownerDocument;
+    modalDoc.getElementById('modal-close-btn').addEventListener('click', () => this.closeModal());
+    modalDoc.getElementById('modal-cancel-btn').addEventListener('click', () => this.closeModal());
+    modalDoc.getElementById('modal-save-btn').addEventListener('click', () => {
+        const title = modalDoc.getElementById('modal-title-input').value.trim();
         if (!title) {
             this.showToast('Titel darf nicht leer sein.', 'error');
             return;
         }
         if (type === 'prompt') {
-            const text = document.getElementById('modal-text-input').value;
-            const isSchaefer = document.getElementById('modal-schaefer-input').value === 'true';
+            const text = modalDoc.getElementById('modal-text-input').value;
+            const isSchaefer = modalDoc.getElementById('modal-schaefer-input').value === 'true';
             if (isEdit) {
                 item.title = title;
                 item.text = text;
