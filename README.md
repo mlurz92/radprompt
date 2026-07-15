@@ -109,6 +109,8 @@ Die Vorderseite zeigt:
 - Favoritenstern,
 - Detailbutton.
 
+Ein Klick auf die freie Fläche einer Promptkarte kopiert den Prompt ebenfalls direkt. Eingabefelder, Selects und Buttons bleiben davon ausgenommen, damit Platzhalter gefahrlos bearbeitet werden können. Erfolgreiches Kopieren wird zusätzlich durch eine Glow-Animation bestätigt, die die Kartenkontur kurz nachzeichnet.
+
 Die Rückseite zeigt:
 
 - Titel,
@@ -236,7 +238,7 @@ Ablauf:
 6. Im Ursprungsfenster erscheint ein ruhiger Platzhalter statt einer leeren schwarzen Fläche.
 7. Beim Schließen des PiP-Fensters wird die App zurück in das Ursprungsfenster verschoben.
 
-Wenn die API nicht verfügbar ist, aktiviert RadPrompt einen Fallback-Fokusmodus. Dieser kann das Browserfenster nicht betriebssystemweit im Vordergrund halten; die App kommuniziert das bewusst im Toast, statt eine falsche Zusage zu machen.
+Wichtig: Nach aktuellem Web-Plattform-Modell kann ein Document-Picture-in-Picture-Fenster nicht ohne sein öffnendes Fenster weiterleben. RadPrompt kann dieses Ursprungsfenster daher nicht sicher entfernen, ohne das angepinnte Fenster ebenfalls zu verlieren. Die App reduziert den Störeffekt deshalb auf einen ruhigen Haltebereich und erklärt dort den Zustand. Wenn die API nicht verfügbar ist, aktiviert RadPrompt einen Fallback-Fokusmodus. Dieser kann das Browserfenster nicht betriebssystemweit im Vordergrund halten; die App kommuniziert das bewusst im Toast, statt eine falsche Zusage zu machen.
 
 ---
 
@@ -255,8 +257,8 @@ Wichtige Mechanismen:
 - adaptive Headerabstände,
 - kleine Buttonflächen in niedrigen Viewports,
 - Favoritenleiste als Overlay,
-- dynamische Spaltenzahl mit mindestens drei Spalten,
-- zusätzliche Spalten bei ausreichender Breite,
+- dynamische Spaltenzahl mit mindestens drei und höchstens sieben Spalten,
+- so viele Spalten wie die Breite sinnvoll zulässt, begrenzt auf sieben,
 - dynamische quadratische Kartengröße über `--dynamic-card-size`,
 - dynamische Spaltenzahl über `--dynamic-card-columns`.
 
@@ -401,7 +403,7 @@ git diff --check
 
 ## 21. Bekannte technische Grenzen
 
-- Echtes Anpinnen im Vordergrund hängt von der Browserunterstützung für Document Picture-in-Picture ab.
+- Echtes Anpinnen im Vordergrund hängt von der Browserunterstützung für Document Picture-in-Picture ab. Das PiP-Fenster kann nach Web-Plattform-Vorgaben nicht unabhängig vom öffnenden Fenster existieren.
 - Ohne KV-Binding bleibt die Synchronisation lokal.
 - CDN-Bibliotheken benötigen beim ersten Laden Netzwerkzugriff.
 - Clipboard-Zugriffe können je nach Browser, Kontext und Berechtigung eingeschränkt sein; dafür existiert ein Fallback.

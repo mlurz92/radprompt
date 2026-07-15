@@ -197,9 +197,10 @@ App.updateCardScale = function() {
     const width = container.clientWidth - parseFloat(styles.paddingLeft || 0) - parseFloat(styles.paddingRight || 0);
     const height = container.clientHeight - parseFloat(styles.paddingTop || 0) - parseFloat(styles.paddingBottom || 0);
     const minimumColumns = 3;
-    const maxComfortableCardSize = 240;
-    const widthPreferredColumns = Math.ceil((width + gap) / (maxComfortableCardSize + gap));
-    const columns = Math.max(minimumColumns, Math.min(cards.length || minimumColumns, widthPreferredColumns));
+    const maximumColumns = 7;
+    const minimumReadableCardSize = 150;
+    const widthAllowedColumns = Math.floor((width + gap) / (minimumReadableCardSize + gap));
+    const columns = Math.max(minimumColumns, Math.min(maximumColumns, widthAllowedColumns || minimumColumns));
     const rows = Math.max(1, Math.ceil(cards.length / columns));
     const widthBound = (width - gap * (columns - 1)) / columns;
     const heightBound = (height - gap * (rows - 1)) / rows;
@@ -436,6 +437,14 @@ App.createCard = function(item) {
         });
     }
 
+    if (item.type === 'prompt' && !this.state.isSorting) {
+        card.addEventListener('click', (e) => {
+            if (card.classList.contains('flipped')) return;
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea')) return;
+            this.copyPrompt(item, card);
+        });
+    }
+
     return card;
 };
 
@@ -460,25 +469,36 @@ App.copyPrompt = async function(item, cardEl) {
             const combinedText = `${text}\n\n${schaeferCTText}\n\n${schaeferMRTText}`;
             await navigator.clipboard.writeText(combinedText);
             this.showToast('Prompt + Schäfer Beispiele kopiert!', 'success');
+            this.triggerCopyGlow(cardEl);
         } else {
             await navigator.clipboard.writeText(text);
             this.showToast('Prompt erfolgreich kopiert!', 'success');
+            this.triggerCopyGlow(cardEl);
         }
     } catch (err) {
-        const textArea = document.createElement('textarea');
-        textArea.value = item.isSchaefer ? `${text}\n\n${schaeferCTText}\n\n${schaeferMRTText}` : text;
         const doc = cardEl.ownerDocument || document;
+        const textArea = doc.createElement('textarea');
+        textArea.value = item.isSchaefer ? `${text}\n\n${schaeferCTText}\n\n${schaeferMRTText}` : text;
         doc.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
         try {
-            document.execCommand('copy');
+            doc.execCommand('copy');
             this.showToast('Prompt erfolgreich kopiert!', 'success');
+            this.triggerCopyGlow(cardEl);
         } catch (execErr) {
             this.showToast('Kopieren fehlgeschlagen.', 'error');
         }
         textArea.remove();
     }
+};
+
+App.triggerCopyGlow = function(cardEl) {
+    if (!cardEl) return;
+    cardEl.classList.remove('copy-confirmed');
+    void cardEl.offsetWidth;
+    cardEl.classList.add('copy-confirmed');
+    setTimeout(() => cardEl.classList.remove('copy-confirmed'), 950);
 };
 
 App.toggleFavorite = function(id, btnEl) {
@@ -675,7 +695,7 @@ App.showPinnedPlaceholder = function() {
     placeholder.innerHTML = `
         <div class="pinned-opener-card">
             <strong>RadPrompt ist angepinnt</strong>
-            <span>Die Arbeitsoberfläche läuft im Vordergrundfenster. Schließe das angepinnte Fenster oder nutze dort den Pin-Button, um hierher zurückzukehren.</span>
+            <span>Die Arbeitsoberfläche läuft im Vordergrundfenster. Dieses Ursprungsfenster bleibt aus Browser-Sicherheitsgründen erforderlich, wird aber nur noch als ruhiger Haltebereich angezeigt.</span>
         </div>
     `;
     document.body.appendChild(placeholder);
