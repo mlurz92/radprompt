@@ -274,8 +274,9 @@ html, body {
 
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-auto-rows: auto;
+    grid-template-columns: repeat(3, minmax(0, var(--dynamic-card-size, 1fr)));
+    grid-auto-rows: var(--dynamic-card-size, auto);
+    justify-content: center;
     gap: var(--grid-gap);
     perspective: 1500px;
     flex-grow: 1;
@@ -896,7 +897,7 @@ html, body {
     .action-btn, .icon-btn { padding: 0.42rem; min-width: 2.1rem; }
     .cards-grid { padding-right: 0.15rem; }
     .card-face { border-radius: 12px; }
-    .folder-icon svg { width: 34px; height: 34px; }
+    .folder-icon svg { width: 40px; height: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1054,4 +1055,10 @@ body.focus-mode .fav-item {
     letter-spacing: 0.02em;
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
+}
+
+@media (max-width: 420px) {
+    .cards-grid {
+        grid-template-columns: repeat(2, minmax(0, var(--dynamic-card-size, 1fr)));
+    }
 }
