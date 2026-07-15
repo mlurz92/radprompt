@@ -934,3 +934,124 @@ html, body {
 .pip-body .action-btn span {
     display: none;
 }
+
+/* PWA- und rahmenlos optimierte Darstellung */
+html, body, .cards-grid, .card-back, .card-text, .favorites-list, .modal-body, .form-textarea {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+
+@media (display-mode: standalone), (display-mode: window-controls-overlay) {
+    .widget-container {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+        border-color: transparent;
+        padding-top: max(var(--widget-padding), env(titlebar-area-height, 0px));
+    }
+}
+
+body.focus-mode .widget-container {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+    background: rgba(5, 5, 7, 0.72);
+}
+
+body.focus-mode .widget-header {
+    -webkit-app-region: drag;
+}
+
+body.focus-mode button,
+body.focus-mode input,
+body.focus-mode select,
+body.focus-mode textarea,
+body.focus-mode .card,
+body.focus-mode .breadcrumb-item,
+body.focus-mode .fav-item {
+    -webkit-app-region: no-drag;
+}
+
+/* Veredelte Ordnerkarten */
+.card:has(.folder-icon) .card-front {
+    background:
+        linear-gradient(145deg, rgba(99, 102, 241, 0.18), rgba(6, 182, 212, 0.08) 45%, rgba(236, 72, 153, 0.10)),
+        rgba(18, 18, 22, 0.72);
+    overflow: hidden;
+}
+
+.card:has(.folder-icon) .card-front::before {
+    content: '';
+    position: absolute;
+    inset: -40% -20% auto auto;
+    width: 70%;
+    aspect-ratio: 1;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.36), transparent 64%);
+    filter: blur(6px);
+    opacity: 0.65;
+    transition: transform var(--transition-smooth), opacity var(--transition-fast);
+}
+
+.card:has(.folder-icon) .card-front::after {
+    content: '';
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    bottom: 18%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+}
+
+.card:has(.folder-icon):hover .card-front::before {
+    transform: translate(-10%, 12%) scale(1.18);
+    opacity: 0.9;
+}
+
+.folder-icon {
+    position: relative;
+    z-index: 1;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(248, 249, 250, 0.82);
+    opacity: 0.9;
+    filter: drop-shadow(0 12px 24px rgba(6, 182, 212, 0.20));
+    transition: transform var(--transition-bounce), color var(--transition-fast), filter var(--transition-fast);
+}
+
+.card:hover .folder-icon {
+    color: #67e8f9;
+    transform: translateY(-4px) scale(1.08);
+    filter: drop-shadow(0 16px 34px rgba(99, 102, 241, 0.34));
+}
+
+.folder-meta {
+    position: relative;
+    z-index: 1;
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 0.34rem 0.62rem;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.055);
+    color: var(--text-secondary);
+    font-size: clamp(0.62rem, 0.8vw, 0.74rem);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
