@@ -5,7 +5,10 @@ const App = {
         currentPath: ['root'],
         data: null,
         favorites: [],
-        isSorting: false
+        isSorting: false,
+        contextItemId: null,
+        isPinned: false,
+        pipWindow: null
     },
     elements: {},
     sortableInstance: null
@@ -13,6 +16,7 @@ const App = {
 
 App.init = function() {
     this.elements = {
+        appHost: document.getElementById('app-host'),
         preloader: document.getElementById('preloader'),
         appTitle: document.getElementById('app-title'),
         backBtn: document.getElementById('back-btn'),
@@ -21,9 +25,11 @@ App.init = function() {
         addPromptBtn: document.getElementById('add-prompt-btn'),
         addFolderBtn: document.getElementById('add-folder-btn'),
         sortBtn: document.getElementById('sort-btn'),
+        pinWindowBtn: document.getElementById('pin-window-btn'),
         favoritesContainer: document.getElementById('favorites-container'),
         modalOverlay: document.getElementById('modal-overlay'),
         modalContent: document.getElementById('modal-content'),
+        contextMenu: document.getElementById('context-menu'),
         toastContainer: document.getElementById('toast-container')
     };
 
@@ -46,6 +52,15 @@ App.bindEvents = function() {
     this.elements.addPromptBtn.addEventListener('click', () => this.openModal('prompt'));
     this.elements.addFolderBtn.addEventListener('click', () => this.openModal('folder'));
     this.elements.sortBtn.addEventListener('click', () => this.toggleSortMode());
+    this.elements.pinWindowBtn.addEventListener('click', () => this.togglePinnedWindow());
+    document.addEventListener('click', () => this.closeContextMenu());
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            this.closeContextMenu();
+            this.closeModal();
+            this.unflipCards();
+        }
+    });
     this.elements.modalOverlay.addEventListener('click', (e) => {
         if (e.target === this.elements.modalOverlay) this.closeModal();
     });
@@ -104,7 +119,7 @@ App.getCurrentNode = function() {
 App.render = function() {
     const node = this.getCurrentNode();
     this.elements.cardsContainer.innerHTML = '';
-    
+
     this.renderBreadcrumb();
     this.elements.backBtn.classList.toggle('hidden', this.state.currentPath.length === 1);
 
@@ -125,8 +140,8 @@ App.render = function() {
     this.initSortable();
     this.renderFavorites();
 
-    gsap.fromTo('.card', 
-        { opacity: 0, y: 20, scale: 0.95 }, 
+    gsap.fromTo('.card',
+        { opacity: 0, y: 20, scale: 0.95 },
         { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.03, ease: 'power2.out' }
     );
 };
@@ -163,8 +178,12 @@ App.findNodeById = function(id, node = this.state.data) {
 
 App.createCard = function(item) {
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = `card${this.state.isSorting ? ' sorting' : ''}`;
     card.dataset.id = item.id;
+    card.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        this.openContextMenu(e, item, card);
+    });
     card.draggable = this.state.isSorting;
 
     const inner = document.createElement('div');
@@ -419,7 +438,10 @@ App.navigateBack = function() {
 App.toggleSortMode = function() {
     this.state.isSorting = !this.state.isSorting;
     this.elements.sortBtn.classList.toggle('active', this.state.isSorting);
-    document.querySelectorAll('.card').forEach(c => c.draggable = this.state.isSorting);
+    document.querySelectorAll('.card').forEach(c => {
+        c.draggable = this.state.isSorting;
+        c.classList.toggle('sorting', this.state.isSorting);
+    });
     this.showToast(this.state.isSorting ? 'Sortiermodus aktiviert' : 'Sortiermodus deaktiviert', 'success');
 };
 
@@ -442,6 +464,121 @@ App.initSortable = function() {
             this.saveData();
         }
     });
+};
+
+
+App.unflipCards = function(root = document) {
+    root.querySelectorAll('.card.flipped').forEach(card => card.classList.remove('flipped'));
+};
+
+App.togglePinnedWindow = async function() {
+    if (this.state.isPinned) {
+        this.closePinnedWindow();
+        return;
+    }
+
+    if (!('documentPictureInPicture' in window)) {
+        this.showToast('Immer-im-Vordergrund wird von diesem Browser nicht unterstützt.', 'error');
+        return;
+    }
+
+    try {
+        const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 520, height: 760 });
+        this.state.pipWindow = pipWindow;
+        this.state.isPinned = true;
+        this.elements.pinWindowBtn.classList.add('active');
+        this.copyStylesToPinnedWindow(pipWindow);
+        pipWindow.document.body.className = 'pip-body';
+        pipWindow.document.body.appendChild(this.elements.appHost);
+        pipWindow.document.addEventListener('click', () => this.closeContextMenu());
+        pipWindow.document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                this.closeContextMenu();
+                this.closeModal();
+                this.unflipCards(pipWindow.document);
+            }
+        });
+        pipWindow.addEventListener('pagehide', () => this.restoreFromPinnedWindow(), { once: true });
+        this.showToast('RadPrompt bleibt jetzt im Vordergrund.', 'success');
+    } catch (error) {
+        this.state.isPinned = false;
+        this.state.pipWindow = null;
+        this.elements.pinWindowBtn.classList.remove('active');
+        this.showToast('Vordergrundmodus konnte nicht gestartet werden.', 'error');
+    }
+};
+
+App.copyStylesToPinnedWindow = function(pipWindow) {
+    [...document.querySelectorAll('link[rel="stylesheet"], style')].forEach(node => {
+        pipWindow.document.head.appendChild(node.cloneNode(true));
+    });
+    const meta = pipWindow.document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = 'width=device-width, initial-scale=1.0';
+    pipWindow.document.head.appendChild(meta);
+    pipWindow.document.title = 'RadPrompt · Vordergrund';
+};
+
+App.closePinnedWindow = function() {
+    if (this.state.pipWindow && !this.state.pipWindow.closed) {
+        this.state.pipWindow.close();
+    } else {
+        this.restoreFromPinnedWindow();
+    }
+};
+
+App.restoreFromPinnedWindow = function() {
+    if (!document.body.contains(this.elements.appHost)) {
+        document.body.insertBefore(this.elements.appHost, document.querySelector('script[src="data.js"]'));
+    }
+    this.state.isPinned = false;
+    this.state.pipWindow = null;
+    this.elements.pinWindowBtn.classList.remove('active');
+};
+
+App.openContextMenu = function(event, item, cardEl) {
+    this.state.contextItemId = item.id;
+    const favoriteLabel = this.state.favorites.includes(item.id) ? 'Favorit entfernen' : 'Als Favorit markieren';
+    const folderAction = item.type === 'folder' ? '<button data-action="open">Ordner öffnen</button>' : '';
+    const copyAction = item.type === 'prompt' ? '<button data-action="copy">Prompt kopieren</button>' : '';
+    this.elements.contextMenu.innerHTML = `
+        ${copyAction}
+        ${folderAction}
+        <button data-action="favorite">${favoriteLabel}</button>
+        <button data-action="expand">Details anzeigen</button>
+        <div class="menu-separator"></div>
+        <button data-action="edit">Bearbeiten</button>
+        <button data-action="delete" class="danger">Löschen</button>
+    `;
+    this.elements.contextMenu.querySelectorAll('button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.handleContextAction(button.dataset.action, item, cardEl);
+        });
+    });
+    this.elements.contextMenu.classList.remove('hidden');
+    const rect = this.elements.contextMenu.getBoundingClientRect();
+    const left = Math.min(event.clientX, window.innerWidth - rect.width - 12);
+    const top = Math.min(event.clientY, window.innerHeight - rect.height - 12);
+    this.elements.contextMenu.style.left = `${Math.max(12, left)}px`;
+    this.elements.contextMenu.style.top = `${Math.max(12, top)}px`;
+    gsap.fromTo(this.elements.contextMenu, { opacity: 0, scale: 0.96, y: -4 }, { opacity: 1, scale: 1, y: 0, duration: 0.16, ease: 'power2.out' });
+};
+
+App.handleContextAction = function(action, item, cardEl) {
+    this.closeContextMenu();
+    if (action === 'copy') this.copyPrompt(item, cardEl);
+    if (action === 'open') this.navigateIntoFolder(item.id);
+    if (action === 'favorite') this.toggleFavorite(item.id, cardEl.querySelector('.fav-btn'));
+    if (action === 'expand') cardEl.classList.add('flipped');
+    if (action === 'edit') this.openModal(item.type, item);
+    if (action === 'delete') this.deleteItem(item.id);
+};
+
+App.closeContextMenu = function() {
+    if (!this.elements.contextMenu) return;
+    this.elements.contextMenu.classList.add('hidden');
+    this.state.contextItemId = null;
 };
 
 App.openModal = function(type, item = null) {
