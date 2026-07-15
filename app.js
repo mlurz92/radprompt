@@ -7,7 +7,8 @@ const App = {
         favorites: [],
         isSorting: false,
         contextItemId: null,
-        isFocusMode: localStorage.getItem('radprompt_focus_mode') === 'true'
+        isFocusMode: localStorage.getItem('radprompt_focus_mode') === 'true',
+        resizeObserver: null
     },
     elements: {},
     sortableInstance: null
@@ -33,6 +34,7 @@ App.init = function() {
     };
 
     this.bindEvents();
+    window.addEventListener('resize', () => this.updateCardScale());
     this.loadData().then(() => {
         this.applyFocusMode();
         this.registerServiceWorker();
@@ -131,6 +133,8 @@ App.render = function() {
         emptyState.innerHTML = `<div>Ordner ist leer.</div><div style="font-size: 0.8rem; opacity: 0.7;">Klicke auf einen freien Bereich, um zurückzugehen.</div>`;
         this.elements.cardsContainer.appendChild(emptyState);
         this.initSortable();
+        this.renderFavorites();
+        this.updateCardScale();
         return;
     }
 
@@ -142,7 +146,31 @@ App.render = function() {
     this.initSortable();
     this.renderFavorites();
 
+    this.updateCardScale();
     this.animateCardsIn();
+};
+
+App.updateCardScale = function() {
+    const container = this.elements.cardsContainer;
+    if (!container) return;
+
+    const cards = container.querySelectorAll('.card');
+    if (cards.length === 0) {
+        container.style.removeProperty('--dynamic-card-size');
+        return;
+    }
+
+    const styles = getComputedStyle(container);
+    const gap = parseFloat(styles.columnGap || styles.gap) || 0;
+    const width = container.clientWidth - parseFloat(styles.paddingLeft || 0) - parseFloat(styles.paddingRight || 0);
+    const height = container.clientHeight - parseFloat(styles.paddingTop || 0) - parseFloat(styles.paddingBottom || 0);
+    const columns = window.matchMedia('(max-width: 420px)').matches ? 2 : 3;
+    const rows = Math.max(1, Math.ceil(cards.length / columns));
+    const widthBound = (width - gap * (columns - 1)) / columns;
+    const heightBound = (height - gap * (rows - 1)) / rows;
+    const nextSize = Math.max(48, Math.floor(Math.min(widthBound, heightBound)));
+
+    container.style.setProperty('--dynamic-card-size', `${nextSize}px`);
 };
 
 App.animateCardsIn = function() {
@@ -261,7 +289,7 @@ App.createCard = function(item) {
     } else if (item.type === 'folder') {
         const folderIcon = document.createElement('div');
         folderIcon.className = 'folder-icon';
-        folderIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+        folderIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
         front.appendChild(folderIcon);
 
         const folderMeta = document.createElement('div');
@@ -653,13 +681,23 @@ App.closeModal = function() {
     this.elements.modalOverlay.classList.remove('flex');
 };
 
+App.collectNodeIds = function(node) {
+    const ids = [node.id];
+    if (node.children) {
+        node.children.forEach(child => ids.push(...this.collectNodeIds(child)));
+    }
+    return ids;
+};
+
 App.deleteItem = function(id) {
     const node = this.getCurrentNode();
     const index = node.children.findIndex(c => c.id === id);
     if (index > -1) {
-        const itemName = node.children[index].title;
+        const removedItem = node.children[index];
+        const itemName = removedItem.title;
+        const removedIds = this.collectNodeIds(removedItem);
         node.children.splice(index, 1);
-        this.state.favorites = this.state.favorites.filter(f => f !== id);
+        this.state.favorites = this.state.favorites.filter(f => !removedIds.includes(f));
         this.saveData();
         this.render();
         this.showToast(`"${itemName}" gelöscht`, 'success');
