@@ -1,403 +1,416 @@
 # RadPrompt
 
-RadPrompt ist ein installierbares, dunkles Schnellzugriffsboard für radiologische KI-Prompts. Die Anwendung verbindet eine bewusst reduzierte, quadratische Kartenoberfläche mit einer sehr konkreten Aufgabe: häufig benötigte radiologische Prompts, Ordnerstrukturen, Platzhalter, Prof.-Schäfer-Beispielkontexte und Favoriten so bereitzustellen, dass der Weg vom Befundarbeitsplatz zur Zwischenablage nur wenige Sekunden dauert.
+RadPrompt ist ein installierbares, dunkles Schnellzugriffsboard für radiologische KI-Prompts. Die Anwendung ist darauf ausgelegt, wiederkehrende Prompt-Bausteine im Befundalltag extrem schnell zu finden, optional mit Fallangaben zu füllen, in die Zwischenablage zu kopieren und anschließend in ein KI-System oder ein anderes Zielsystem einzufügen. Im Mittelpunkt steht nicht ein allgemeines Notizbuch, sondern ein fokussiertes Prompt-Cockpit für radiologische Arbeitsplätze mit wenig Platz, häufig parallelen Fenstern und hohem Bedarf an schneller, verlässlicher Interaktion.
 
-Die Anwendung ist absichtlich kein allgemeines Notizprogramm, kein umfangreiches CMS und kein Chat-Frontend. RadPrompt ist ein kompaktes Prompt-Cockpit: Prompt finden, bei Bedarf Variablen eintragen, kopieren, in ein KI-System oder ein anderes Zielsystem einfügen.
+Die Oberfläche kombiniert ein kompaktes Kartenraster, eine flache Ordnernavigation, Favoriten, Bearbeitungsdialoge, lokale und optionale KV-basierte Datenhaltung, PWA-Fähigkeit, Offline-Shell-Caching und eine echte Fenster-Fixieren-Option über Document Picture-in-Picture, sofern der Browser diese API unterstützt.
 
-## Inhaltsverzeichnis
+---
 
-1. [Kernidee](#kernidee)
-2. [Zielgruppe und Nutzungssituation](#zielgruppe-und-nutzungssituation)
-3. [Oberfläche im Überblick](#oberfläche-im-überblick)
-4. [Kartenmodell](#kartenmodell)
-5. [Prompt-Karten](#prompt-karten)
-6. [Ordner-Karten](#ordner-karten)
-7. [Navigation](#navigation)
-8. [Favoriten](#favoriten)
-9. [Sortiermodus](#sortiermodus)
-10. [Bearbeiten, Erstellen und Löschen](#bearbeiten-erstellen-und-löschen)
-11. [Platzhalter-Logik](#platzhalter-logik)
-12. [Prof-Schäfer-Kontextmodus](#prof-schäfer-kontextmodus)
-13. [Layout, Skalierung und Responsivität](#layout-skalierung-und-responsivität)
-14. [Design-System](#design-system)
-15. [Animationen und Mikrointeraktionen](#animationen-und-mikrointeraktionen)
-16. [PWA- und Fokusmodus](#pwa--und-fokusmodus)
-17. [Datenhaltung und Synchronisation](#datenhaltung-und-synchronisation)
-18. [Offline-Verhalten](#offline-verhalten)
-19. [Barrierearme Details](#barrierearme-details)
-20. [Dateien und Architektur](#dateien-und-architektur)
-21. [Bedienabläufe](#bedienabläufe)
-22. [Entwicklung und lokaler Start](#entwicklung-und-lokaler-start)
-23. [Externe Bibliotheken](#externe-bibliotheken)
-24. [Fehlerrobustheit und bekannte Grenzen](#fehlerrobustheit-und-bekannte-grenzen)
+## 1. Kernidee
 
-## Kernidee
+RadPrompt beantwortet eine sehr konkrete Frage: Wie kommt ein Radiologe oder eine radiologisch arbeitende Person in wenigen Sekunden vom aktuellen Fallkontext zu einem passenden, hochwertigen KI-Prompt?
 
-RadPrompt organisiert radiologische KI-Prompts als visuelle, quadratische Karten. Jede Karte ist entweder ein Prompt oder ein Ordner. Prompts können direkt kopiert werden. Ordner öffnen eine tiefere Ebene. Häufig benötigte Elemente lassen sich als Favorit markieren. Die Oberfläche bleibt dunkel, kompakt und ablenkungsarm, weil sie für Umgebungen gedacht ist, in denen große helle Flächen und unnötige UI-Komplexität stören würden.
+Dazu organisiert die App Prompts als visuelle Karten. Jede Karte ist entweder:
 
-Der zentrale Produktgedanke ist Geschwindigkeit ohne Unordnung. Die App bietet genug Verwaltungsfunktionen, um eine Prompt-Sammlung lebendig zu halten, aber die primäre Interaktion bleibt immer die gleiche: visuell erkennen, anklicken, kopieren.
+- ein **Prompt**, der direkt kopiert werden kann, oder
+- ein **Ordner**, der eine weitere Ebene mit Prompts oder Unterordnern öffnet.
 
-## Zielgruppe und Nutzungssituation
+Alle Inhalte liegen in einer Baumstruktur. Die App startet im Wurzelordner, zeigt dort die vorhandenen Karten und lässt den Nutzer durch Ordner navigieren. Häufig benötigte Einträge können als Favoriten markiert werden und bleiben über eine überlagernde Favoritenleiste jederzeit erreichbar.
 
-RadPrompt richtet sich an radiologische Workflows, in denen wiederkehrende KI-Aufgaben schnell gestartet werden sollen. Dazu gehören zum Beispiel strukturierte Bildinterpretationsprompts, Befundformulierungsunterstützung, Modalitäts-spezifische Anweisungen, Vorlagen mit klinischen Angaben und spezielle Kontexte für einen bestimmten Befundstil.
+Die Anwendung ist bewusst dunkel, ruhig und kompakt gestaltet. Sie soll neben PACS, RIS, Browser, Chatfenster oder Befundsoftware laufen können, ohne visuell zu stören oder unnötig Platz zu verbrauchen.
 
-Typische Nutzungssituation:
+---
 
-1. Die Anwendung läuft als Browserseite, installierte PWA oder rahmenloser Fokusmodus.
-2. Der Nutzer befindet sich in einem radiologischen Arbeitskontext.
-3. Ein KI-System oder Chatfenster wartet auf einen Prompt.
-4. RadPrompt liefert den passenden Textbaustein inklusive optional ausgefüllter Platzhalter.
-5. Der kopierte Text wird in das Zielsystem eingefügt.
+## 2. Zielgruppe und Nutzungssituation
 
-## Oberfläche im Überblick
+RadPrompt richtet sich an radiologische Workflows, in denen dieselben oder ähnliche KI-Aufgaben regelmäßig vorkommen:
 
-Die App besteht aus einer einzigen Hauptansicht mit mehreren klar getrennten Bereichen:
+- strukturierte Bildinterpretation,
+- Befundformulierungsunterstützung,
+- Modalitäts-spezifische Analyseaufträge,
+- onkologische Verlaufskontrollen,
+- muskuloskelettale Spezialfragen,
+- Vorlagen mit klinischen Angaben und Fragestellungen,
+- Prompts im Stil bestimmter Befundschulen,
+- Prompts mit ergänzenden Beispielkontexten.
 
-- **Hintergrundeffekte:** Dunkle Grundfläche mit farbigen, weich verschwommenen Orbs und dezenter Noise-Struktur.
-- **Glascontainer:** Zentrierter Hauptbereich mit Blur, Glasoptik, Border und Schatten.
-- **Header:** Linke Navigationszone mit Zurückbutton, Titel und Breadcrumb; rechte Aktionszone mit Hinzufügen-, Sortier- und Fokusbutton.
-- **Kartenraster:** Hauptfläche für Ordner- und Prompt-Karten.
-- **Footer/Favoritenleiste:** Kompakt eingeklappte Favoritenzone am unteren Rand.
-- **Modal:** Dialogsystem zum Hinzufügen und Bearbeiten.
-- **Kontextmenü:** Rechtsklickmenü für schnelle Kartenaktionen.
-- **Toast-Container:** Kurze Statusmeldungen für Kopieren, Löschen, Sortiermodus und Fokusmodus.
-- **Preloader:** Kurzer Startzustand mit Spinner, bis Initialdaten und Rendering abgeschlossen sind.
+Typischer Ablauf:
 
-## Kartenmodell
+1. RadPrompt läuft als Browserseite, PWA, schmales Zusatzfenster oder angepinntes Picture-in-Picture-Fenster.
+2. Der Nutzer öffnet den passenden Ordner oder greift über Favoriten auf einen Prompt zu.
+3. Platzhalter wie klinische Angaben, Fragestellung oder Modalität werden auf der Karte ausgefüllt.
+4. Der Prompt wird per Kopierbutton in die Zwischenablage gelegt.
+5. Der Text wird in ein KI-System oder Zielsystem eingefügt.
 
-Alle Inhalte basieren auf einem Baum aus Knoten. Jeder Knoten besitzt eine eindeutige `id`, einen `type`, einen `title` und je nach Typ weitere Felder.
+---
 
-- Ein **Ordner** besitzt `children` und kann weitere Ordner oder Prompts enthalten.
-- Ein **Prompt** besitzt `text` und optional `isSchaefer`.
-- Der Wurzelknoten ist ein Ordner mit der technischen ID `root`; in der UI erscheint er als `Home`.
+## 3. UI-Aufbau
 
-Die quadratische Kartenform ist bewusst gewählt. Sie macht die Oberfläche visuell stabil, gleichmäßig und touchfreundlich. Jede Karte hat eine Vorderseite für schnelle Nutzung und eine Rückseite für Details, Bearbeitung und Löschung.
+Die Anwendung besteht aus mehreren klar getrennten Bereichen.
 
-## Prompt-Karten
+### 3.1 Hintergrund
 
-Prompt-Karten zeigen oben den Titel. Darunter erscheinen automatisch Eingabefelder, wenn der Prompt Platzhalter enthält. Unten links befindet sich der Kopierbutton. Unten rechts öffnet ein Detailbutton die Kartenrückseite. Oben rechts sitzt der Favoritenstern.
+Der Hintergrund verwendet eine sehr dunkle Basisfarbe, weiche farbige Orbs und eine dezente Noise-Struktur. Dadurch bleibt die Fläche zurückhaltend, wirkt aber nicht flach. Der Hintergrund ist rein dekorativ und nimmt keine Interaktion entgegen.
 
-Die Kartenrückseite zeigt den vollständigen Prompt-Text in einer monospace-artigen Darstellung. Dadurch lassen sich lange, strukturierte Prompts vor dem Bearbeiten oder Verwenden prüfen. Auf der Rückseite befinden sich außerdem Aktionen zum Bearbeiten, Löschen und Zurückdrehen.
+### 3.2 Glascontainer
 
-Beim Kopieren wird der Prompt-Text vorbereitet, indem alle bekannten Platzhalter durch die Werte der jeweiligen Eingabefelder ersetzt werden. Falls ein Feld leer bleibt, wird der Platzhaltername als lesbarer Fallback eingesetzt. Dadurch entstehen keine leeren Lücken im kopierten Prompt.
+Der eigentliche Arbeitsbereich sitzt in einem Glascontainer mit Blur, Transparenz, feiner Border und Schatten. Auf großen Viewports ist er zentriert und begrenzt. Auf kleinen Viewports, in der PWA oder im Fokusmodus füllt er den verfügbaren Raum randlos aus.
 
-## Ordner-Karten
+### 3.3 Header
 
-Ordner-Karten öffnen per Klick eine tiefere Ebene. Sie besitzen eine stärkere visuelle Identität als einfache Prompt-Karten: eine glasige, farbige Vorderseite, ein leuchtendes Ordnerpiktogramm, dezente Lichtlinien und eine Elementanzahl. Das Ordnerpiktogramm ist etwas größer gestaltet, damit Ordner auch in verkleinerten Layoutsituationen sofort als Navigationselement erkennbar bleiben.
+Der Header enthält links:
 
-Die Ordnerkarte zeigt:
+- Zurückbutton,
+- aktuellen Titel,
+- Breadcrumb-Navigation.
 
-- den Ordnertitel,
-- ein zentrales Ordnersymbol,
-- eine Angabe der enthaltenen Elemente,
-- den Favoritenstern,
-- den Detailbutton.
+Rechts enthält er:
 
-Auf der Rückseite steht eine kurze Zusammenfassung der enthaltenen Elementanzahl sowie die gleichen Verwaltungsaktionen wie bei Prompt-Karten.
+- Prompt hinzufügen,
+- Ordner hinzufügen,
+- Sortiermodus,
+- Fenster fixieren.
 
-## Navigation
+Der Header wurde für kurze horizontale Viewports verdichtet. Abstände, Schriftgrößen und Button-Paddings sind so reduziert, dass die Kartenfläche möglichst viel vertikalen Raum erhält.
 
-Navigation findet auf drei Ebenen statt:
+### 3.4 Kartenraster
 
-1. **Ordnerklick:** Öffnet einen Ordner.
-2. **Zurückbutton:** Führt eine Ebene nach oben und erscheint nur außerhalb von `Home`.
-3. **Breadcrumb:** Zeigt die aktuelle Pfadstruktur und erlaubt den direkten Sprung zu jeder übergeordneten Ebene.
+Das Kartenraster ist die Hauptfläche. Es skaliert dynamisch anhand der verfügbaren Breite und Höhe. Drei Spalten sind die Mindeststruktur. Wenn die Viewportbreite mehr Platz bietet, darf die Anwendung automatisch mehr Spalten verwenden. Die Kartengröße wird per JavaScript berechnet und als CSS-Variable gesetzt, sodass Breite, Höhe, Spaltenzahl und Zeilenbedarf gemeinsam berücksichtigt werden.
 
-Leere Ordner erhalten einen Empty State. Dieser erklärt, dass der Ordner leer ist und ein Klick auf freie Fläche zurückführt. Auch in leeren Ordnern bleibt die Favoritenleiste korrekt aktualisiert.
+### 3.5 Favoritenleiste
 
-## Favoriten
+Die Favoritenleiste liegt unten als Overlay über dem Inhalt. Im eingeklappten Zustand bleibt nur ein schmaler Griff sichtbar. Dadurch können Karten nahezu bis zum unteren Rand wachsen. Wenn die Leiste eingeblendet wird, verändert sie die Kartengröße nicht, sondern überlagert die Kartenfläche. Nach Interaktion blendet sie sich automatisch wieder aus.
 
-Jede Karte kann als Favorit markiert werden. Favoriten werden als IDs gespeichert und unten in einer horizontalen Leiste angezeigt.
+### 3.6 Modal-System
 
-Die Favoritenleiste ist im Alltag absichtlich kompakt. Sie sitzt am unteren Rand, zeigt zunächst nur eine kleine Griff-/Leistenwirkung und fährt beim Hover aus. So bleibt die Hauptfläche frei, ohne dass Schnellzugriffe verschwinden.
+Prompts und Ordner werden über modale Dialoge hinzugefügt und bearbeitet. Das Modal enthält klare Formularbereiche, eigene Scrollflächen und getrennte Aktionen für Speichern und Abbrechen.
 
-Favoritenverhalten:
+### 3.7 Kontextmenü
 
-- Prompt-Favorit: Ein Klick kopiert den Prompt direkt.
-- Ordner-Favorit: Ein Klick navigiert direkt zum gespeicherten Ordner.
-- Entfernte Karten werden aus der Favoritenliste bereinigt.
-- Beim Löschen eines Ordners werden auch Favoriten innerhalb seiner Unterstruktur entfernt.
+Per Rechtsklick öffnet sich ein Kontextmenü mit Aktionen passend zur Karte: kopieren, Ordner öffnen, Favorit umschalten, Details anzeigen, bearbeiten und löschen. Das Menü positioniert sich innerhalb des aktiven Fensters, auch wenn RadPrompt in einem Picture-in-Picture-Dokument läuft.
 
-## Sortiermodus
+### 3.8 Toasts
 
-Der Sortierbutton schaltet den Drag-and-drop-Modus um. Nur im Sortiermodus sind Karten aktiv ziehbar. Dadurch werden versehentliche Drag-Interaktionen im normalen Arbeitsfluss vermieden.
+Statusmeldungen erscheinen als Toasts. Sie bestätigen beispielsweise Kopieren, Löschen, Sortiermodus, Fokusmodus und Fehler. Toasts verschwinden automatisch.
 
-Im Sortiermodus:
+---
 
-- Karten erhalten einen Greifcursor.
-- SortableJS verwaltet Drag, Ghost und Drop.
-- Die Reihenfolge wird nur im aktuell geöffneten Ordner geändert.
-- Nach dem Loslassen wird die neue Reihenfolge gespeichert.
+## 4. Kartenmodell
 
-## Bearbeiten, Erstellen und Löschen
+Eine Karte besitzt eine Vorderseite und eine Rückseite.
 
-Über die Header-Buttons können neue Prompts und Ordner in der aktuellen Ebene angelegt werden.
+### 4.1 Prompt-Karte
 
-### Prompt hinzufügen
-
-Der Prompt-Dialog enthält:
+Die Vorderseite zeigt:
 
 - Titel,
-- Prompt-Text,
-- Auswahl, ob der Prof.-Schäfer-Kontext beim Kopieren angehängt werden soll.
+- automatisch erkannte Eingabefelder für Platzhalter,
+- Kopierbutton,
+- Favoritenstern,
+- Detailbutton.
 
-### Ordner hinzufügen
+Ein Klick auf die freie Fläche einer Promptkarte kopiert den Prompt ebenfalls direkt. Eingabefelder, Selects und Buttons bleiben davon ausgenommen, damit Platzhalter gefahrlos bearbeitet werden können. Erfolgreiches Kopieren wird zusätzlich durch eine Glow-Animation bestätigt, die die Kartenkontur kurz nachzeichnet.
 
-Der Ordnerdialog enthält:
+Die Rückseite zeigt:
 
-- Titel.
+- Titel,
+- vollständigen Prompttext in monospace-artiger Darstellung,
+- Bearbeiten,
+- Löschen,
+- Zurückdrehen.
 
-Ein neuer Ordner startet mit leerem `children`-Array und kann anschließend weitere Prompts oder Ordner aufnehmen.
+### 4.2 Ordner-Karte
 
-### Bearbeiten
+Ordnerkarten zeigen:
 
-Bestehende Karten können über die Kartenrückseite oder das Kontextmenü bearbeitet werden. Bei Prompts lassen sich Titel, Text und Schäfer-Markierung ändern. Bei Ordnern wird der Titel geändert.
+- Titel,
+- ein großes Ordnersymbol,
+- Anzahl enthaltener Elemente,
+- Favoritenstern,
+- Detailbutton.
 
-### Löschen
+Ein Klick auf eine Ordnerkarte öffnet die nächste Ebene, solange der Sortiermodus nicht aktiv ist.
 
-Löschen entfernt den Eintrag aus dem aktuellen Ordner. Bei Ordnern wird die gesamte Unterstruktur entfernt. RadPrompt bereinigt dabei auch Favoriten, die auf gelöschte Elemente verweisen.
+### 4.3 Kartenrückseite
 
-## Platzhalter-Logik
+Die Rückseite dient als Detail- und Verwaltungsfläche. Promptkarten zeigen dort den kompletten Text. Ordnerkarten zeigen eine Zusammenfassung der enthaltenen Elemente. Die Karten drehen sich visuell, behalten aber dieselbe Rasterposition.
 
-RadPrompt erkennt Platzhalter im Format:
+---
 
-```text
-***Name***
-```
+## 5. Platzhalterlogik
 
-Jeder eindeutige Platzhalter erzeugt ein Eingabeelement auf der Prompt-Karte. Mehrfach vorkommende Platzhalter werden nur einmal als Feld angezeigt, beim Kopieren aber überall ersetzt.
+Platzhalter werden im Prompttext über die Syntax `***Name***` definiert. Beim Rendern einer Promptkarte sucht RadPrompt alle eindeutigen Platzhalter und erzeugt passende Eingaben.
 
-Sonderfall:
+- Normale Platzhalter werden als Textfelder gerendert.
+- Der Platzhalter `***Modalität***` wird als Auswahlfeld mit CT, MRT, Röntgen und CT&MRT dargestellt.
+- Beim Kopieren werden alle Vorkommen eines Platzhalters ersetzt.
+- Bleibt ein Feld leer, verwendet die App den Platzhalternamen als lesbaren Fallback.
 
-```text
-***Modalität***
-```
+Dadurch können Prompts flexibel bleiben, ohne dass vor jedem Kopieren ein separater Editor geöffnet werden muss.
 
-Dieser Platzhalter wird nicht als freies Textfeld, sondern als Auswahlfeld dargestellt. Verfügbare Optionen sind:
+---
 
-- CT,
-- MRT,
-- Röntgen,
-- CT&MRT.
+## 6. Prof.-Schäfer-Kontextmodus
 
-Diese Logik reduziert Tippaufwand und verhindert uneinheitliche Schreibweisen bei häufig verwendeten Modalitätsangaben.
+Prompt-Einträge können als Prof.-Schäfer-Prompt markiert werden. Beim Kopieren wird dann nicht nur der Prompttext kopiert, sondern zusätzlich ein CT- und MRT-Beispielkontext angehängt. Diese Beispieltexte liegen in `data.js` als `schaeferCTText` und `schaeferMRTText` vor.
 
-## Prof-Schäfer-Kontextmodus
+Der Nutzwert besteht darin, einem KI-System neben der konkreten Aufgabe auch stilistische und strukturelle Beispiele mitzugeben. Das unterstützt einen kompakten, radiologisch geprägten Befundstil.
 
-Ein Prompt kann als Prof.-Schäfer-Prompt markiert werden. Beim Kopieren hängt RadPrompt dann zusätzlich umfangreiche CT- und MRT-Befundbeispiele an den Prompt an.
+---
 
-Dieser Modus macht aus einer normalen Prompt-Karte einen Kontextlieferanten. Die Anwendung liefert nicht nur eine Anweisung, sondern auch Stil- und Strukturbeispiele. Das ist besonders nützlich, wenn ein bestimmter kompakter, radiologischer Befundstil erzeugt werden soll.
+## 7. Navigation
 
-Die Beispieltexte liegen direkt in `data.js` und sind in CT- und MRT-Blöcke getrennt. Beim Kopieren entsteht ein kombinierter Text aus ausgefülltem Prompt, CT-Beispielen und MRT-Beispielen.
+Die Navigation basiert auf einem Pfad durch den Datenbaum.
 
-## Layout, Skalierung und Responsivität
+- Der Wurzelknoten erscheint als Home.
+- Ordnerklicks erweitern den Pfad.
+- Der Zurückbutton entfernt die letzte Pfadstufe.
+- Breadcrumb-Elemente erlauben den direkten Sprung auf frühere Ebenen.
+- Klicks auf freie Flächen in leeren Ordnern führen zurück.
 
-RadPrompt nutzt ein quadratisches Kartenraster. Auf normalen Breiten werden drei Spalten verwendet. Auf sehr schmalen Breiten wird auf zwei Spalten reduziert.
+Die Navigation ist bewusst flach und schnell gehalten. Es gibt keine separate Seitenstruktur, keine Routen und keinen Reload beim Wechseln zwischen Ordnern.
 
-Eine wichtige Layoutregel ist: Karten bleiben immer quadratisch. Wenn die Viewporthöhe niedrig ist, berechnet die App dynamisch eine passende Kartengröße anhand der verfügbaren Rasterhöhe, der Anzahl der Karten, der Spaltenzahl und des aktuellen Grid-Gaps. Die Karten werden dann verkleinert, statt nach unten unkontrolliert abgeschnitten zu werden. Der Abstand zwischen den Karten bleibt dabei über die bestehende Gap-Variable kontrolliert und wird nicht künstlich vergrößert.
+---
 
-Das Raster berücksichtigt:
+## 8. Favoriten
 
-- verfügbare Containerbreite,
-- verfügbare Containerhöhe,
-- Anzahl der Karten,
-- Spaltenzahl,
-- Zeilenzahl,
-- aktuelles CSS-Gap,
-- Favoritenbereich am unteren Rand.
+Jede Karte kann über den Stern als Favorit markiert werden. Favoriten werden in `radprompt_favorites` lokal gespeichert und optional über den KV-Endpunkt synchronisiert.
 
-Die Skalierung wird beim Rendern und bei Fenstergrößenänderungen aktualisiert. Dadurch passt sich die Oberfläche auch an kleine Desktopfenster, geteilte Bildschirmbereiche und PWA-Fenster an.
+Die Favoritenleiste ist als Overlay umgesetzt:
 
-## Design-System
+- eingeklappt: nur ein schmaler Griff bleibt sichtbar,
+- geöffnet: Favoritenelemente sind horizontal scroll-/wischbar,
+- nach Interaktion: zeitgesteuertes Ausblenden,
+- Kartengröße: bleibt unverändert, weil die Leiste nicht am Layoutfluss teilnimmt.
 
-### Farben
+Prompt-Favoriten kopieren direkt. Ordner-Favoriten navigieren zum entsprechenden Ordner.
 
-Die Basisfarbe ist ein nahezu schwarzes `#050507`. Darauf liegen halbtransparente Glasflächen, helle Textfarben und Indigo-/Cyan-/Pink-Akzente. Die Farbwelt ist auf radiologische Lesesituationen abgestimmt: dunkel, ruhig, kontrastreich und ohne grelle Flächen.
+---
 
-### Glasflächen
+## 9. Sortiermodus
 
-Container, Karten, Header-Aktionsgruppe, Favoritenleiste, Kontextmenü und Modale verwenden transparente Hintergründe, Backdrop-Blur, Border und Schatten. Dadurch entsteht Tiefe, ohne dass die App schwer oder bunt wirkt.
+Der Sortierbutton aktiviert Drag-and-Drop über SortableJS. Im Sortiermodus:
 
-### Typografie
+- Karten erhalten einen Sortiercursor,
+- Ordner öffnen nicht versehentlich beim Ziehen,
+- die Reihenfolge wird nach dem Drop im aktuellen Ordner gespeichert,
+- Drag- und Ghost-Zustände werden visuell hervorgehoben.
 
-Die UI nutzt Inter für Bedienoberfläche und Lesbarkeit. Prompt-Texte und Textareas nutzen JetBrains Mono, damit strukturierte Anweisungen, Absätze und Platzhalter klarer erfassbar sind.
+Der Sortiermodus ist absichtlich manuell aktivierbar, damit normale Klicknavigation nicht mit Drag-Gesten kollidiert.
 
-### Radien und Schatten
+---
 
-Das Design verwendet kleine, mittlere und große Radien. Karten sind weich, aber nicht verspielt. Schatten trennen Ebenen voneinander und unterstützen das Gefühl eines schwebenden, kompakten Boards.
+## 10. Bearbeiten, Erstellen und Löschen
 
-## Animationen und Mikrointeraktionen
+### 10.1 Prompt hinzufügen
 
-RadPrompt nutzt Animationen gezielt, aber nicht überladen:
+Ein neuer Prompt benötigt mindestens einen Titel. Optional können Prompttext und Prof.-Schäfer-Modus gesetzt werden. Neue Prompts werden im aktuellen Ordner eingefügt.
 
-- Karten erscheinen gestaffelt mit leichter Bewegung.
-- Karten können räumlich auf ihre Rückseite flippen.
-- Der Favoritenbereich fährt weich aus.
-- Kontextmenüs skalieren dezent ein.
-- Hover-Zustände verändern Border, Glow, Translation und Farbe.
-- Der Ordner-Hover hebt das Ordnersymbol an und verstärkt den Glow.
-- Toasts erscheinen mit kurzer, federnder Bewegung.
+### 10.2 Ordner hinzufügen
 
-Bei `prefers-reduced-motion: reduce` werden Animationen nahezu vollständig reduziert. Damit respektiert die App Systemeinstellungen für bewegungsarme Darstellung.
+Ein neuer Ordner benötigt einen Titel und startet mit leerer `children`-Liste.
 
-## PWA- und Fokusmodus
+### 10.3 Bearbeiten
 
-RadPrompt ist als installierbare Webapp vorbereitet. Das Manifest definiert Name, Kurzname, Beschreibung, Start-URL, Scope, Standalone-Anzeige, Theme-Farbe, Hintergrundfarbe, Icon und Shortcut.
+Bestehende Einträge können über Kartenrückseite oder Kontextmenü bearbeitet werden. Titel, Prompttext und Schäfer-Status werden aktualisiert.
 
-Der Fokusmodus wird über den Pin-Button aktiviert. Er öffnet kein zweites Fenster, sondern erweitert die bestehende App rahmenlos auf die verfügbare Fläche. Dieser Zustand wird in `localStorage` gespeichert und übersteht Reloads.
+### 10.4 Löschen
 
-Im Fokusmodus:
+Beim Löschen wird der Eintrag aus dem aktuellen Ordner entfernt. Bei Ordnern werden die IDs des gesamten Teilbaums gesammelt, damit Favoriten auf gelöschte Unterelemente ebenfalls bereinigt werden.
 
-- füllt der Hauptcontainer die komplette Fläche,
-- verschwinden Rahmen und zusätzlicher Schatten,
-- bleibt die UI dunkel und ablenkungsarm,
-- ist die Headerzone für Desktop-/Webapp-Wrapper als Drag-Region vorbereitet,
-- bleiben Buttons, Eingaben, Karten, Breadcrumbs und Favoriten explizit interaktiv.
+### 10.5 Eingabesicherheit im Modal
 
-## Datenhaltung und Synchronisation
+Beim Bearbeiten werden Titel und Prompttext HTML-escaped in das Modal geschrieben. Dadurch können Sonderzeichen, spitze Klammern und Anführungszeichen nicht versehentlich die Formularstruktur brechen.
 
-RadPrompt verwendet eine zweistufige Datenstrategie:
+---
 
-1. Zuerst versucht die App, Daten und Favoriten über `/api/kv` zu laden.
-2. Wenn der Endpunkt nicht verfügbar ist, nutzt sie `localStorage`.
+## 11. Fenster fixieren
 
-Beim Speichern werden Daten ebenfalls lokal abgelegt und zusätzlich an `/api/kv` gesendet. Scheitert die Serversynchronisation, bleibt die lokale Speicherung erhalten.
+Der Pin-Button versucht zuerst, RadPrompt über die **Document Picture-in-Picture API** in ein echtes Vordergrundfenster zu verschieben. Das ist der zuverlässigste browserseitige Weg für ein kleines, stets sichtbares HTML-Fenster, sofern der Browser die API unterstützt.
 
-Der optionale KV-Endpunkt liegt unter `functions/api/kv.js` und erwartet eine Umgebung mit `RADPROMPT_KV`. Er speichert den kompletten App-Zustand unter dem Schlüssel `radprompt_state`.
+Ablauf:
 
-## Offline-Verhalten
+1. Der Nutzer klickt den Pin-Button.
+2. Die App ruft `documentPictureInPicture.requestWindow` auf.
+3. Das bestehende `app-host`-Element wird in das neue PiP-Dokument verschoben.
+4. Styles werden in das PiP-Dokument kopiert.
+5. Karten werden nach Größenänderungen im PiP-Fenster neu skaliert.
+6. Im Ursprungsfenster erscheint ein ruhiger Platzhalter statt einer leeren schwarzen Fläche.
+7. Beim Schließen des PiP-Fensters wird die App zurück in das Ursprungsfenster verschoben.
 
-Der Service Worker cached die App-Shell:
+Wichtig: Nach aktuellem Web-Plattform-Modell kann ein Document-Picture-in-Picture-Fenster nicht ohne sein öffnendes Fenster weiterleben. RadPrompt kann dieses Ursprungsfenster daher nicht sicher entfernen, ohne das angepinnte Fenster ebenfalls zu verlieren. Die App reduziert den Störeffekt deshalb auf einen ruhigen Haltebereich und erklärt dort den Zustand. Wenn die API nicht verfügbar ist, aktiviert RadPrompt einen Fallback-Fokusmodus. Dieser kann das Browserfenster nicht betriebssystemweit im Vordergrund halten; die App kommuniziert das bewusst im Toast, statt eine falsche Zusage zu machen.
 
-- `/`,
-- `index.html`,
-- `style.css`,
-- `app.js`,
-- `data.js`,
-- `manifest.webmanifest`,
-- `assets/app-icon.svg`.
+---
 
-GET-Anfragen werden netzwerkzuerst behandelt und bei Fehlern aus dem Cache beantwortet. Wenn keine spezifische Cache-Antwort existiert, fällt der Service Worker auf `index.html` zurück.
+## 12. Layout und Responsivität
 
-## Barrierearme Details
+RadPrompt ist besonders auf schmale horizontale Viewports optimiert. Das betrifft Situationen wie:
 
-RadPrompt ist keine vollständig auditierte Accessibility-Suite, enthält aber mehrere bewusst gesetzte Details:
+- kleines Zusatzfenster neben PACS/RIS,
+- PWA-Fenster mit geringer Höhe,
+- Picture-in-Picture-Fenster,
+- Landscape-Modus auf kleinen Displays.
 
-- wichtige Header-Buttons besitzen `aria-label`,
-- Toasts verwenden `aria-live` und `aria-atomic`,
-- Formularfelder besitzen sichtbare Fokuszustände,
-- reduzierte Bewegung wird respektiert,
-- Kontraste sind für eine dunkle Arbeitsumgebung hoch,
-- große quadratische Karten erleichtern Touch- und Pointer-Nutzung,
-- Kontextmenüaktionen sind als Buttons umgesetzt.
+Wichtige Mechanismen:
 
-## Dateien und Architektur
+- kompakte globale CSS-Variablen für Gap, Kartenpadding und Widgetpadding,
+- adaptive Headerabstände,
+- kleine Buttonflächen in niedrigen Viewports,
+- Favoritenleiste als Overlay,
+- dynamische Spaltenzahl mit mindestens drei und höchstens sieben Spalten,
+- so viele Spalten wie die Breite sinnvoll zulässt, begrenzt auf sieben,
+- dynamische quadratische Kartengröße über `--dynamic-card-size`,
+- dynamische Spaltenzahl über `--dynamic-card-columns`.
 
-### `index.html`
+---
 
-Enthält die App-Shell: Meta-Tags, Manifest-Verknüpfung, externe Bibliotheken, Preloader, Hintergrundeffekte, Hauptcontainer, Header, Kartencontainer, Favoritenfooter, Modal, Kontextmenü, Toastcontainer sowie Script-Einbindungen.
+## 13. Designsystem
 
-### `style.css`
+Das Designsystem basiert auf CSS-Variablen:
 
-Definiert das komplette visuelle System: Variablen, Reset, Hintergrund, Glascontainer, Header, Buttons, Raster, Karten, Kartenrückseiten, Eingaben, Favoriten, Modale, Toasts, Kontextmenü, responsive Regeln, Fokusmodus, PWA-Darstellung, versteckte Scrollbars und veredelte Ordnerkarten.
+- dunkle Hintergrundfarben,
+- Glasflächen,
+- Hover-Glasflächen,
+- Borderfarben,
+- Textfarben,
+- Akzentfarbe Indigo,
+- Danger-Farbe Rot,
+- Schatten,
+- Radien,
+- Transition-Kurven,
+- Grid- und Kartenabstände,
+- Favoritenhöhe und Favoriten-Peek.
 
-### `app.js`
+Die UI nutzt weiche Transitions, dezente Schatten, klare Hoverzustände und runde, touchfreundliche Ziele. Der Stil ist modern, aber bewusst nicht verspielt: im radiologischen Kontext soll die Oberfläche Orientierung geben und nicht ablenken.
 
-Enthält Zustand, Initialisierung, Event-Binding, Laden und Speichern, Rendering, dynamische Kartenskalierung, Kartenbau, Promptkopie, Favoritenlogik, Navigation, Sortiermodus, Kontextmenü, Modalverwaltung, Löschlogik, Toasts, Fokusmodus und Service-Worker-Registrierung.
+---
 
-### `data.js`
+## 14. Animationen und Mikrointeraktionen
 
-Enthält Initialdaten und die Prof.-Schäfer-Beispieltexte. Die Initialdaten bilden die erste Ordner- und Promptstruktur der Anwendung.
+RadPrompt verwendet GSAP, wenn verfügbar:
 
-### `manifest.webmanifest`
+- Karten animieren beim Rendern sanft ein.
+- Das Kontextmenü bekommt eine kurze Skalierungs-/Fade-Animation.
 
-Beschreibt RadPrompt als installierbare Webapp mit Name, Anzeigeverhalten, Theme-Farbe, Hintergrundfarbe, Kategorien, Icon und Shortcut.
+Auch ohne GSAP bleibt die App funktionsfähig. CSS-Transitions übernehmen Hover-, Fokus-, Flip- und Favoritenleistenbewegungen. Bei `prefers-reduced-motion` werden Animationen stark reduziert.
 
-### `sw.js`
+---
 
-Implementiert den Service Worker für App-Shell-Caching, Aktivierung, Cache-Bereinigung und Fetch-Fallbacks.
+## 15. Datenhaltung
 
-### `assets/app-icon.svg`
+RadPrompt nutzt zwei Ebenen der Datenhaltung.
 
-Stellt das maskierbare SVG-App-Icon bereit.
+### 15.1 Lokale Daten
 
-### `functions/api/kv.js`
+Im Browser werden gespeichert:
 
-Stellt den optionalen API-Endpunkt für Laden und Speichern des App-Zustands in einem KV-Speicher bereit.
+- `radprompt_data` für die Baumstruktur,
+- `radprompt_favorites` für Favoriten,
+- `radprompt_focus_mode` für den Fokusmodus-Fallback.
 
-## Bedienabläufe
+Wenn lokale Daten beschädigt sind, setzt die App auf die initialen Standarddaten zurück und speichert diese erneut.
 
-### Prompt kopieren
+### 15.2 KV-Synchronisation
 
-1. Ordner öffnen oder Prompt auf der aktuellen Ebene finden.
-2. Falls Felder vorhanden sind, Platzhalterwerte eintragen.
-3. Kopierbutton klicken.
-4. Toast bestätigt das Kopieren.
-5. Text im Zielsystem einfügen.
+Unter `functions/api/kv.js` liegt ein Cloudflare-Pages-kompatibler Endpunkt:
 
-### Prompt prüfen
+- `GET /api/kv` lädt den gespeicherten Zustand,
+- `POST /api/kv` speichert Daten und Favoriten.
 
-1. Detailbutton einer Prompt-Karte klicken.
-2. Rückseite lesen.
-3. Bei Bedarf bearbeiten oder Karte zurückdrehen.
+Wenn der Endpunkt nicht verfügbar ist, arbeitet RadPrompt lokal weiter.
 
-### Ordner öffnen
+---
 
-1. Ordnerkarte anklicken.
-2. App aktualisiert Titel, Breadcrumb und Kartenraster.
-3. Zurückbutton oder Breadcrumb nutzen, um wieder nach oben zu gelangen.
+## 16. Offline- und PWA-Verhalten
 
-### Favorit setzen
+Die App besitzt:
 
-1. Stern auf einer Karte klicken.
-2. Element erscheint in der Favoritenleiste.
-3. Favoritenleiste am unteren Rand hovern.
-4. Favorit direkt nutzen.
+- `manifest.webmanifest` für Installierbarkeit,
+- `sw.js` für App-Shell-Caching,
+- App-Icon als SVG,
+- Standalone-/Window-Controls-Overlay-Optimierungen,
+- Theme- und Hintergrundfarben passend zum dunklen Design.
 
-### Reihenfolge ändern
+Der Service Worker cached die zentrale App-Shell und versucht bei GET-Anfragen zuerst das Netzwerk. Bei Netzwerkfehlern fällt er auf Cacheinhalte oder `index.html` zurück.
 
-1. Sortierbutton aktivieren.
-2. Karte ziehen.
-3. Karte an neuer Position ablegen.
-4. Sortierbutton optional deaktivieren.
+---
 
-## Entwicklung und lokaler Start
+## 17. Barrierearme und robuste Details
 
-RadPrompt benötigt keinen Build-Schritt. Ein statischer Server reicht aus.
+Die Anwendung enthält mehrere robuste Details:
+
+- Buttons besitzen `aria-label` oder klare Titel.
+- Der Pin-Button setzt `aria-pressed`.
+- Toasts werden in einem `aria-live`-Container angezeigt.
+- Eingabefelder und Selects haben klare visuelle Fokuszustände.
+- Scrollbars werden visuell reduziert, aber interne Scrollflächen bleiben nutzbar.
+- Leere Ordner zeigen einen verständlichen Empty State.
+- Esc schließt Kontextmenü, Modal und aufgeklappte Karten.
+- Kontextmenüpositionen werden am Fensterrand begrenzt.
+- Copy-Fallback nutzt ein temporäres Textarea-Element, wenn die Clipboard API fehlschlägt.
+
+---
+
+## 18. Externe Bibliotheken
+
+Die App lädt folgende externe Bausteine über CDN:
+
+- Tailwind CDN für Utility-Klassen in Markup und Modal-Struktur,
+- Google Fonts: Inter und JetBrains Mono,
+- GSAP und Flip für Animationen,
+- SortableJS für Drag-and-Drop-Sortierung.
+
+Die Kernlogik der Anwendung liegt ohne Framework in `app.js`.
+
+---
+
+## 19. Dateien und Architektur
+
+| Datei | Zweck |
+| --- | --- |
+| `index.html` | HTML-Grundstruktur, Header, Kartencontainer, Favoritenleiste, Modal, Kontextmenü, Toastcontainer, Script-/Style-Einbindung |
+| `style.css` | Vollständiges Designsystem, Layout, Responsivität, Karten, Modals, Favoriten, PiP-/Fokusdarstellung |
+| `app.js` | App-Zustand, Rendering, Navigation, Kartenlogik, Favoriten, Sortierung, Modal, Kopieren, PiP-Pinning |
+| `data.js` | Initialdaten, Promptbaum, Prof.-Schäfer-Beispieltexte |
+| `sw.js` | Service Worker für App-Shell-Caching |
+| `manifest.webmanifest` | PWA-Metadaten, Icons, Display-Modi, Shortcuts |
+| `functions/api/kv.js` | Optionaler Cloudflare-KV-Endpunkt für Synchronisation |
+| `assets/app-icon.svg` | Installations- und App-Icon |
+
+---
+
+## 20. Lokale Entwicklung
+
+Da RadPrompt eine statische App ist, reicht ein einfacher HTTP-Server:
 
 ```bash
-python3 -m http.server 8000
+python3 -m http.server 4173
 ```
 
-Danach ist die App unter folgender Adresse erreichbar:
+Danach ist die App lokal unter `http://127.0.0.1:4173/` erreichbar.
 
-```text
-http://localhost:8000
+Sinnvolle Checks:
+
+```bash
+node --check app.js
 ```
 
-Für sinnvolle Browserprüfungen sollte die App über HTTP statt direkt über `file://` geöffnet werden, weil Service Worker, Fetch-Verhalten und Clipboard-Funktionen sonst je nach Browser eingeschränkt sein können.
+```bash
+git diff --check
+```
 
-## Externe Bibliotheken
+---
 
-RadPrompt lädt externe Bibliotheken direkt über CDN:
+## 21. Bekannte technische Grenzen
 
-- Tailwind CDN für Utility-Klassen im HTML,
-- Google Fonts für Inter und JetBrains Mono,
-- GSAP für Animationen,
-- GSAP Flip als vorbereitete Animationsbibliothek,
-- SortableJS für Drag-and-drop-Sortierung.
+- Echtes Anpinnen im Vordergrund hängt von der Browserunterstützung für Document Picture-in-Picture ab. Das PiP-Fenster kann nach Web-Plattform-Vorgaben nicht unabhängig vom öffnenden Fenster existieren.
+- Ohne KV-Binding bleibt die Synchronisation lokal.
+- CDN-Bibliotheken benötigen beim ersten Laden Netzwerkzugriff.
+- Clipboard-Zugriffe können je nach Browser, Kontext und Berechtigung eingeschränkt sein; dafür existiert ein Fallback.
+- Medizinische Inhalte und Prompts ersetzen keine fachärztliche Verantwortung. RadPrompt organisiert und kopiert Arbeitsanweisungen, trifft aber keine medizinischen Entscheidungen.
 
-## Fehlerrobustheit und bekannte Grenzen
+---
 
-RadPrompt ist bewusst einfach gehalten und robust gegenüber fehlendem Backend. Wenn `/api/kv` nicht erreichbar ist, arbeitet die App lokal weiter. Wenn die moderne Clipboard-API fehlschlägt, versucht die App einen klassischen Textarea-Fallback.
+## 22. Designphilosophie in einem Satz
 
-Bekannte Grenzen:
-
-- Ohne passenden KV-Speicher ist Synchronisation geräteübergreifend nicht verfügbar.
-- Externe CDN-Ressourcen müssen erreichbar sein, wenn sie nicht bereits vom Browser gecacht sind.
-- Die medizinische Qualität der Prompts hängt vom gepflegten Inhalt ab; RadPrompt validiert keine medizinischen Aussagen.
-- Sehr große Kartenzahlen können trotz dynamischer Skalierung Scrollen erforderlich machen, weil eine sinnvolle Mindestbedienbarkeit erhalten bleiben muss.
-
-## Kurzfazit
-
-RadPrompt ist ein spezialisiertes, dunkles, installierbares Prompt-Board für radiologische KI-Arbeit. Es kombiniert hierarchische Ordner, quadratische Karten, automatische Platzhalterfelder, Favoriten, Drag-and-drop-Sortierung, Kontextmenüs, Prof.-Schäfer-Kontextkopie, lokale und optionale serverseitige Speicherung, Offline-App-Shell und eine dynamisch skalierende Oberfläche zu einem schnellen Werkzeug für den täglichen Prompt-Zugriff.
+RadPrompt soll sich anfühlen wie ein präzises, dunkles, immer griffbereites Instrument: wenig Reibung, klare Struktur, schnelle Kopierwege, hohe Informationsdichte und genau genug visuelle Veredelung, um im radiologischen Alltag angenehm und verlässlich zu bleiben.
