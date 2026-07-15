@@ -5,6 +5,8 @@ const App = {
         currentPath: ['root'],
         data: null,
         favorites: [],
+        favoritesAutoHideTimer: null,
+        pipWindow: null,
         isSorting: false,
         contextItemId: null,
         isFocusMode: localStorage.getItem('radprompt_focus_mode') === 'true',
@@ -27,6 +29,7 @@ App.init = function() {
         sortBtn: document.getElementById('sort-btn'),
         pinWindowBtn: document.getElementById('pin-window-btn'),
         favoritesContainer: document.getElementById('favorites-container'),
+        favoritesBar: document.getElementById('favorites-bar'),
         modalOverlay: document.getElementById('modal-overlay'),
         modalContent: document.getElementById('modal-content'),
         contextMenu: document.getElementById('context-menu'),
@@ -55,7 +58,7 @@ App.bindEvents = function() {
     this.elements.addPromptBtn.addEventListener('click', () => this.openModal('prompt'));
     this.elements.addFolderBtn.addEventListener('click', () => this.openModal('folder'));
     this.elements.sortBtn.addEventListener('click', () => this.toggleSortMode());
-    this.elements.pinWindowBtn.addEventListener('click', () => this.toggleFocusMode());
+    this.elements.pinWindowBtn.addEventListener('click', () => this.togglePinnedWindow());
     document.addEventListener('click', () => this.closeContextMenu());
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -67,6 +70,28 @@ App.bindEvents = function() {
     this.elements.modalOverlay.addEventListener('click', (e) => {
         if (e.target === this.elements.modalOverlay) this.closeModal();
     });
+
+    this.elements.favoritesBar.addEventListener('pointerenter', () => this.openFavoritesBar());
+    this.elements.favoritesBar.addEventListener('pointerleave', () => this.scheduleFavoritesBarHide());
+    this.elements.favoritesBar.addEventListener('focusin', () => this.openFavoritesBar());
+    this.elements.favoritesBar.addEventListener('focusout', () => this.scheduleFavoritesBarHide());
+    this.elements.favoritesBar.addEventListener('click', () => this.openFavoritesBar(true));
+};
+
+App.openFavoritesBar = function(autoHide = false) {
+    clearTimeout(this.state.favoritesAutoHideTimer);
+    this.elements.favoritesBar.classList.add('is-open');
+
+    if (autoHide) {
+        this.scheduleFavoritesBarHide();
+    }
+};
+
+App.scheduleFavoritesBarHide = function(delay = 2200) {
+    clearTimeout(this.state.favoritesAutoHideTimer);
+    this.state.favoritesAutoHideTimer = setTimeout(() => {
+        this.elements.favoritesBar.classList.remove('is-open');
+    }, delay);
 };
 
 App.loadData = async function() {
@@ -529,18 +554,91 @@ App.unflipCards = function(root = document) {
     root.querySelectorAll('.card.flipped').forEach(card => card.classList.remove('flipped'));
 };
 
-App.toggleFocusMode = function() {
+App.togglePinnedWindow = async function() {
+    if (this.state.pipWindow && !this.state.pipWindow.closed) {
+        this.state.pipWindow.close();
+        return;
+    }
+
+    if ('documentPictureInPicture' in window) {
+        try {
+            await this.openPinnedPictureInPicture();
+        } catch (error) {
+            console.warn('Document Picture-in-Picture failed.', error);
+            this.showToast('Anpinnen konnte nicht gestartet werden. Bitte erneut per Button versuchen.', 'error');
+        }
+        return;
+    }
+
     this.state.isFocusMode = !this.state.isFocusMode;
     localStorage.setItem('radprompt_focus_mode', String(this.state.isFocusMode));
     this.applyFocusMode();
-    this.showToast(this.state.isFocusMode ? 'Rahmenloser Fokusmodus aktiviert.' : 'Fokusmodus deaktiviert.', 'success');
+    this.showToast(
+        this.state.isFocusMode
+            ? 'Fallback-Fokusmodus aktiviert. Echtes Anpinnen benötigt Document Picture-in-Picture.'
+            : 'Fokusmodus deaktiviert.',
+        'success'
+    );
+};
+
+App.openPinnedPictureInPicture = async function() {
+    const width = Math.min(Math.max(window.innerWidth, 420), 900);
+    const height = Math.min(Math.max(window.innerHeight, 280), 620);
+    const pipWindow = await window.documentPictureInPicture.requestWindow({
+        width,
+        height,
+        disallowReturnToOpener: true,
+        preferInitialWindowPlacement: true
+    });
+
+    this.state.pipWindow = pipWindow;
+    this.state.isFocusMode = true;
+    localStorage.setItem('radprompt_focus_mode', 'true');
+
+    this.preparePinnedWindow(pipWindow);
+    pipWindow.document.body.appendChild(this.elements.appHost);
+    this.applyFocusMode();
+    this.updateCardScale();
+    pipWindow.addEventListener('resize', () => this.updateCardScale());
+    this.showToast('Anwendungsfenster ist jetzt im Vordergrund angepinnt.', 'success');
+
+    pipWindow.addEventListener('pagehide', () => {
+        document.body.appendChild(this.elements.appHost);
+        this.state.pipWindow = null;
+        this.state.isFocusMode = false;
+        localStorage.setItem('radprompt_focus_mode', 'false');
+        this.applyFocusMode();
+        this.updateCardScale();
+    }, { once: true });
+};
+
+App.preparePinnedWindow = function(pipWindow) {
+    pipWindow.document.documentElement.className = document.documentElement.className;
+    pipWindow.document.title = document.title;
+
+    const viewport = pipWindow.document.createElement('meta');
+    viewport.name = 'viewport';
+    viewport.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+    pipWindow.document.head.appendChild(viewport);
+
+    document.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
+        pipWindow.document.head.appendChild(node.cloneNode(true));
+    });
+
+    pipWindow.document.body.className = `${document.body.className} pip-body`.trim();
 };
 
 App.applyFocusMode = function() {
+    const isPinned = Boolean(this.state.pipWindow && !this.state.pipWindow.closed);
     document.body.classList.toggle('focus-mode', this.state.isFocusMode);
-    this.elements.pinWindowBtn.classList.toggle('active', this.state.isFocusMode);
-    this.elements.pinWindowBtn.setAttribute('aria-pressed', String(this.state.isFocusMode));
-    this.elements.pinWindowBtn.title = this.state.isFocusMode ? 'Fokusmodus deaktivieren' : 'Rahmenlosen Fokusmodus aktivieren';
+    if (isPinned) {
+        this.state.pipWindow.document.body.classList.toggle('focus-mode', this.state.isFocusMode);
+    }
+    this.elements.pinWindowBtn.classList.toggle('active', this.state.isFocusMode || isPinned);
+    this.elements.pinWindowBtn.setAttribute('aria-pressed', String(this.state.isFocusMode || isPinned));
+    this.elements.pinWindowBtn.title = isPinned
+        ? 'Anpinnen beenden'
+        : 'Im Vordergrund anpinnen';
 };
 
 App.registerServiceWorker = function() {
