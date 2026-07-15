@@ -22,10 +22,11 @@
     --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    --grid-gap: clamp(0.65rem, 1.4vw, 1.25rem);
-    --card-padding: clamp(0.72rem, 1.25vw, 1.2rem);
-    --widget-padding: clamp(0.9rem, 1.6vw, 1.35rem);
+    --grid-gap: clamp(0.55rem, 1.2vw, 1.05rem);
+    --card-padding: clamp(0.66rem, 1.1vw, 1.05rem);
+    --widget-padding: clamp(0.7rem, 1.25vw, 1.1rem);
     --favorites-height: 48px;
+    --favorites-peek: 18px;
 }
 
 
@@ -170,9 +171,9 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.85rem;
-    padding: 0 0.25rem;
-    gap: 0.75rem;
+    margin-bottom: clamp(0.35rem, 1vh, 0.7rem);
+    padding: 0 0.15rem;
+    gap: 0.55rem;
 }
 
 #app-title {
@@ -180,7 +181,7 @@ html, body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.02em;
-    font-size: clamp(1.1rem, 1.9vw, 1.35rem);
+    font-size: clamp(1rem, 1.55vw, 1.22rem);
     font-weight: 700;
     max-width: min(42vw, 34rem);
     overflow: hidden;
@@ -217,7 +218,7 @@ html, body {
 .header-left, .header-right {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.35rem;
 }
 
 .header-left {
@@ -227,7 +228,7 @@ html, body {
 
 .header-right {
     flex: 0 0 auto;
-    padding: 0.28rem;
+    padding: 0.2rem;
     border: 1px solid var(--border-glass);
     border-radius: 14px;
     background: rgba(8, 8, 12, 0.36);
@@ -241,12 +242,12 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 0.38rem;
-    padding: 0.43rem 0.68rem;
+    padding: 0.34rem 0.56rem;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border-glass);
     border-radius: 9px;
     color: var(--text-secondary);
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -283,7 +284,7 @@ html, body {
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 0.5rem;
-    padding-bottom: calc(var(--favorites-height) + 1.5rem);
+    padding-bottom: calc(var(--favorites-peek) + 0.45rem);
     min-height: 0;
 }
 
@@ -545,7 +546,7 @@ html, body {
     padding: 0.52rem 0.95rem;
     min-height: var(--favorites-height);
     max-height: var(--favorites-height);
-    transform: translateY(calc(100% - 20px));
+    transform: translateY(calc(100% - var(--favorites-peek)));
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.4s ease;
     position: relative;
     overflow: hidden;
@@ -573,7 +574,9 @@ html, body {
     background: var(--accent);
 }
 
-.favorites-bar:hover {
+.favorites-bar:hover,
+.favorites-bar.is-open,
+.favorites-bar:focus-within {
     transform: translateY(0);
     max-height: 80px;
 }
@@ -889,6 +892,71 @@ html, body {
     cursor: grabbing;
 }
 
+
+@media (max-height: 520px) and (orientation: landscape), (max-height: 430px) {
+    .widget-container {
+        --widget-padding: clamp(0.42rem, 1.4vh, 0.68rem);
+        --grid-gap: clamp(0.38rem, 1.1vh, 0.62rem);
+        --card-padding: clamp(0.5rem, 1.35vh, 0.72rem);
+        --favorites-height: 42px;
+        --favorites-peek: 14px;
+    }
+
+    .widget-header {
+        margin-bottom: 0.3rem;
+        gap: 0.38rem;
+    }
+
+    #app-title {
+        font-size: clamp(0.9rem, 3vh, 1.05rem);
+        max-width: min(35vw, 22rem);
+    }
+
+    .breadcrumb {
+        font-size: 0.76rem;
+        margin-left: 0.25rem;
+        gap: 0.25rem;
+    }
+
+    .header-right {
+        gap: 0.16rem;
+        padding: 0.14rem;
+        border-radius: 11px;
+    }
+
+    .icon-btn, .action-btn {
+        min-width: 1.8rem;
+        min-height: 1.8rem;
+        padding: 0.26rem 0.4rem;
+        gap: 0.25rem;
+        border-radius: 8px;
+        font-size: 0.68rem;
+    }
+
+    .icon-btn svg, .action-btn svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .cards-grid {
+        padding-right: 0.2rem;
+    }
+
+    .card-title {
+        margin-bottom: 0.28rem;
+        line-height: 1.22;
+    }
+
+    .card-input-group {
+        gap: 0.32rem;
+    }
+
+    .favorites-bar {
+        padding: 0.42rem 0.75rem;
+        border-radius: 13px;
+    }
+}
+
 @media (max-width: 680px) {
     .widget-container { --widget-padding: 0.7rem; padding: var(--widget-padding); }
     .widget-header { gap: 0.55rem; margin-bottom: 0.65rem; }
@@ -898,6 +966,29 @@ html, body {
     .cards-grid { padding-right: 0.15rem; }
     .card-face { border-radius: 12px; }
     .folder-icon svg { width: 40px; height: 40px; }
+}
+
+
+@media (max-width: 680px) and (max-height: 520px) and (orientation: landscape), (max-width: 680px) and (max-height: 430px) {
+    .widget-container {
+        --widget-padding: clamp(0.42rem, 1.4vh, 0.68rem);
+        --grid-gap: clamp(0.38rem, 1.1vh, 0.62rem);
+        --card-padding: clamp(0.5rem, 1.35vh, 0.72rem);
+        --favorites-height: 42px;
+        --favorites-peek: 14px;
+        padding: var(--widget-padding);
+    }
+
+    .widget-header {
+        margin-bottom: 0.3rem;
+        gap: 0.38rem;
+    }
+
+    .action-btn, .icon-btn {
+        min-width: 1.8rem;
+        min-height: 1.8rem;
+        padding: 0.26rem 0.4rem;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
