@@ -120,6 +120,7 @@ App.render = function() {
     const node = this.getCurrentNode();
     this.elements.cardsContainer.innerHTML = '';
 
+    this.renderLocationTitle(node);
     this.renderBreadcrumb();
     this.elements.backBtn.classList.toggle('hidden', this.state.currentPath.length === 1);
 
@@ -140,10 +141,31 @@ App.render = function() {
     this.initSortable();
     this.renderFavorites();
 
-    gsap.fromTo('.card',
-        { opacity: 0, y: 20, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.03, ease: 'power2.out' }
-    );
+    this.animateCardsIn();
+};
+
+App.animateCardsIn = function() {
+    if (window.gsap) {
+        gsap.fromTo('.card',
+            { opacity: 0, y: 20, scale: 0.95 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.03, ease: 'power2.out' }
+        );
+    }
+};
+
+App.animateContextMenuIn = function() {
+    if (window.gsap) {
+        gsap.fromTo(this.elements.contextMenu,
+            { opacity: 0, scale: 0.96, y: -4 },
+            { opacity: 1, scale: 1, y: 0, duration: 0.16, ease: 'power2.out' }
+        );
+    }
+};
+
+App.renderLocationTitle = function(node = this.getCurrentNode()) {
+    const title = node && node.id === 'root' ? 'Home' : node.title;
+    this.elements.appTitle.textContent = title;
+    document.title = `${title} · RadPrompt`;
 };
 
 App.renderBreadcrumb = function() {
@@ -227,8 +249,7 @@ App.createCard = function(item) {
         }
 
         const copyBtn = document.createElement('button');
-        copyBtn.className = 'btn-icon-sm';
-        copyBtn.style.cssText = 'position: absolute; bottom: 1rem; left: 1rem; color: var(--text-muted);';
+        copyBtn.className = 'btn-icon-sm copy-btn';
         copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
         copyBtn.title = 'Prompt kopieren';
         copyBtn.addEventListener('click', (e) => {
@@ -446,6 +467,9 @@ App.toggleSortMode = function() {
 };
 
 App.initSortable = function() {
+    if (!window.Sortable) {
+        return;
+    }
     if (this.sortableInstance) {
         this.sortableInstance.destroy();
     }
@@ -520,16 +544,17 @@ App.copyStylesToPinnedWindow = function(pipWindow) {
 };
 
 App.closePinnedWindow = function() {
-    if (this.state.pipWindow && !this.state.pipWindow.closed) {
-        this.state.pipWindow.close();
-    } else {
-        this.restoreFromPinnedWindow();
+    const pipWindow = this.state.pipWindow;
+    this.restoreFromPinnedWindow();
+    if (pipWindow && !pipWindow.closed) {
+        pipWindow.close();
     }
 };
 
 App.restoreFromPinnedWindow = function() {
+    const anchor = document.querySelector('script[src="data.js"]') || document.body.firstChild;
     if (!document.body.contains(this.elements.appHost)) {
-        document.body.insertBefore(this.elements.appHost, document.querySelector('script[src="data.js"]'));
+        document.body.insertBefore(this.elements.appHost, anchor);
     }
     this.state.isPinned = false;
     this.state.pipWindow = null;
@@ -562,7 +587,7 @@ App.openContextMenu = function(event, item, cardEl) {
     const top = Math.min(event.clientY, window.innerHeight - rect.height - 12);
     this.elements.contextMenu.style.left = `${Math.max(12, left)}px`;
     this.elements.contextMenu.style.top = `${Math.max(12, top)}px`;
-    gsap.fromTo(this.elements.contextMenu, { opacity: 0, scale: 0.96, y: -4 }, { opacity: 1, scale: 1, y: 0, duration: 0.16, ease: 'power2.out' });
+    this.animateContextMenuIn();
 };
 
 App.handleContextAction = function(action, item, cardEl) {
