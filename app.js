@@ -153,6 +153,7 @@ App.getCurrentNode = function() {
 App.render = function() {
     const node = this.getCurrentNode();
     this.elements.cardsContainer.innerHTML = '';
+    this.elements.cardsContainer.scrollTop = 0;
 
     this.renderLocationTitle(node);
     this.renderBreadcrumb();
@@ -544,7 +545,8 @@ App.copyPrompt = async function(item, cardEl) {
     inputs.forEach(input => {
         const ph = `***${input.dataset.placeholder}***`;
         const regex = new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-        text = text.replace(regex, input.value || input.dataset.placeholder);
+        const replacement = input.value || input.dataset.placeholder;
+        text = text.replace(regex, () => replacement);
     });
 
     try {

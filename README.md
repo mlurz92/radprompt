@@ -83,7 +83,7 @@ Die Favoritenleiste liegt unten als Overlay über dem Inhalt. Im eingeklappten Z
 
 ### 3.6 Modal-System
 
-Prompts und Ordner werden über modale Dialoge hinzugefügt und bearbeitet. Das Modal enthält klare Formularbereiche, eigene Scrollflächen und getrennte Aktionen für Speichern und Abbrechen.
+Prompts und Ordner werden über modale Dialoge hinzugefügt und bearbeitet. Das Modal enthält klare Formularbereiche, eigene Scrollflächen und getrennte Aktionen für Speichern und Abbrechen. Dasselbe Modal-Fenster wird außerdem für das Ausfüllen offener Platzhalterfelder vor dem Kopieren genutzt (siehe Abschnitt 5).
 
 ### 3.7 Kontextmenü
 
@@ -144,9 +144,10 @@ Platzhalter werden im Prompttext über die Syntax `***Name***` definiert. Beim R
 - Normale Platzhalter werden als Textfelder gerendert.
 - Der Platzhalter `***Modalität***` wird als Auswahlfeld mit CT, MRT, Röntgen und CT&MRT dargestellt.
 - Beim Kopieren werden alle Vorkommen eines Platzhalters ersetzt.
-- Bleibt ein Feld leer, verwendet die App den Platzhalternamen als lesbaren Fallback.
+- Sind beim Klick auf die Karte oder den Kopierbutton noch nicht alle Platzhalterfelder ausgefüllt, öffnet sich zunächst ein an den Viewport angepasstes Modal mit denselben Eingabefeldern. Ein Klick auf „Kopieren“ oder auf einen Bereich des Modals außerhalb der Felder übernimmt die Eingaben, kopiert den fertigen Prompt und schließt das Modal.
+- Sind alle Platzhalterfelder auf der Karte bereits ausgefüllt, wird direkt kopiert, ohne dass das Modal erscheint.
 
-Dadurch können Prompts flexibel bleiben, ohne dass vor jedem Kopieren ein separater Editor geöffnet werden muss.
+Dadurch können Prompts flexibel bleiben, ohne dass vor jedem Kopieren zwingend ein separater Editor geöffnet werden muss.
 
 ---
 
@@ -257,8 +258,8 @@ Wichtige Mechanismen:
 - adaptive Headerabstände,
 - kleine Buttonflächen in niedrigen Viewports,
 - Favoritenleiste als Overlay,
-- dynamische Spaltenzahl mit mindestens drei und höchstens sieben Spalten,
-- so viele Spalten wie die Breite sinnvoll zulässt, begrenzt auf sieben,
+- dynamische Spaltenzahl mit mindestens drei Spalten,
+- so viele Spalten wie die Viewportbreite bei noch lesbarer Kartengröße zulässt, ohne feste Obergrenze,
 - dynamische quadratische Kartengröße über `--dynamic-card-size`,
 - dynamische Spaltenzahl über `--dynamic-card-columns`.
 
