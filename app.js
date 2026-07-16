@@ -153,6 +153,7 @@ App.getCurrentNode = function() {
 App.render = function() {
     const node = this.getCurrentNode();
     this.elements.cardsContainer.innerHTML = '';
+    this.elements.cardsContainer.scrollTop = 0;
 
     this.renderLocationTitle(node);
     this.renderBreadcrumb();
@@ -197,7 +198,7 @@ App.updateCardScale = function() {
     const width = container.clientWidth - parseFloat(styles.paddingLeft || 0) - parseFloat(styles.paddingRight || 0);
     const height = container.clientHeight - parseFloat(styles.paddingTop || 0) - parseFloat(styles.paddingBottom || 0);
     const minimumColumns = 3;
-    const maximumColumns = 7;
+    const maximumColumns = cards.length;
     const minimumReadableCardSize = 150;
     const widthAllowedColumns = Math.floor((width + gap) / (minimumReadableCardSize + gap));
     const columns = Math.max(minimumColumns, Math.min(maximumColumns, widthAllowedColumns || minimumColumns));
@@ -339,7 +340,7 @@ App.createCard = function(item) {
         copyBtn.title = 'Prompt kopieren';
         copyBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.copyPrompt(item, card);
+            this.requestCopy(item, card);
         });
         front.appendChild(copyBtn);
     } else if (item.type === 'folder') {
@@ -441,7 +442,7 @@ App.createCard = function(item) {
         card.addEventListener('click', (e) => {
             if (card.classList.contains('flipped')) return;
             if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea')) return;
-            this.copyPrompt(item, card);
+            this.requestCopy(item, card);
         });
     }
 
@@ -455,13 +456,97 @@ App.getPlaceholders = function(text) {
     return unique;
 };
 
+App.cardHasEmptyPlaceholders = function(cardEl) {
+    const inputs = cardEl.querySelectorAll('.card-input');
+    return Array.from(inputs).some(input => !input.value || !input.value.trim());
+};
+
+App.requestCopy = function(item, cardEl) {
+    const placeholders = this.getPlaceholders(item.text);
+    if (placeholders.length > 0 && this.cardHasEmptyPlaceholders(cardEl)) {
+        this.openPlaceholderModal(item, cardEl);
+        return;
+    }
+    this.copyPrompt(item, cardEl);
+};
+
+App.openPlaceholderModal = function(item, cardEl) {
+    const placeholders = this.getPlaceholders(item.text);
+    const cardFields = Array.from(cardEl.querySelectorAll('.card-input, .card-select'));
+
+    const fieldsHtml = placeholders.map((ph, i) => {
+        const savedValue = cardFields[i] ? cardFields[i].value : '';
+        if (ph === 'Modalität') {
+            const options = ['CT', 'MRT', 'Röntgen', 'CT&MRT'].map(opt =>
+                `<option value="${this.escapeHtml(opt)}" ${savedValue === opt ? 'selected' : ''}>${this.escapeHtml(opt)}</option>`
+            ).join('');
+            return `
+                <div class="form-group">
+                    <label class="form-label">${this.escapeHtml(ph)}</label>
+                    <select class="form-select modal-placeholder-field">${options}</select>
+                </div>
+            `;
+        }
+        return `
+            <div class="form-group">
+                <label class="form-label">${this.escapeHtml(ph.replace(/_/g, ' '))}</label>
+                <input type="text" class="form-input modal-placeholder-field" value="${this.escapeHtml(savedValue)}">
+            </div>
+        `;
+    }).join('');
+
+    this.elements.modalContent.innerHTML = `
+        <div class="modal-placeholder-panel">
+            <div class="modal-header">
+                <h2 class="modal-title">Platzhalter ausfüllen</h2>
+                <button class="icon-btn" id="modal-close-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="modal-body">${fieldsHtml}</div>
+            <div class="modal-footer">
+                <button class="btn-primary" id="modal-copy-btn">Kopieren</button>
+            </div>
+        </div>
+    `;
+
+    this.elements.modalOverlay.classList.remove('hidden');
+    this.elements.modalOverlay.classList.add('flex');
+
+    const modalDoc = this.elements.modalOverlay.ownerDocument;
+    const panel = modalDoc.querySelector('.modal-placeholder-panel');
+
+    const commitCopy = () => {
+        const modalFields = Array.from(panel.querySelectorAll('.modal-placeholder-field'));
+        modalFields.forEach((field, i) => {
+            if (cardFields[i]) cardFields[i].value = field.value;
+        });
+        this.closeModal();
+        this.copyPrompt(item, cardEl);
+    };
+
+    modalDoc.getElementById('modal-close-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeModal();
+    });
+    modalDoc.getElementById('modal-copy-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        commitCopy();
+    });
+    panel.addEventListener('click', (e) => {
+        if (e.target.closest('.modal-placeholder-field') || e.target.closest('#modal-close-btn')) return;
+        commitCopy();
+    });
+};
+
 App.copyPrompt = async function(item, cardEl) {
     let text = item.text;
     const inputs = cardEl.querySelectorAll('.card-input, .card-select');
     inputs.forEach(input => {
         const ph = `***${input.dataset.placeholder}***`;
         const regex = new RegExp(ph.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-        text = text.replace(regex, input.value || input.dataset.placeholder);
+        const replacement = input.value || input.dataset.placeholder;
+        text = text.replace(regex, () => replacement);
     });
 
     try {
@@ -532,7 +617,7 @@ App.renderFavorites = function() {
             fav.addEventListener('click', () => {
                 if (item.type === 'prompt') {
                     const cardEl = this.createCard(item);
-                    this.copyPrompt(item, cardEl);
+                    this.requestCopy(item, cardEl);
                 } else {
                     this.navigateIntoFolder(id);
                 }
@@ -763,7 +848,7 @@ App.openContextMenu = function(event, item, cardEl) {
 
 App.handleContextAction = function(action, item, cardEl) {
     this.closeContextMenu();
-    if (action === 'copy') this.copyPrompt(item, cardEl);
+    if (action === 'copy') this.requestCopy(item, cardEl);
     if (action === 'open') this.navigateIntoFolder(item.id);
     if (action === 'favorite') this.toggleFavorite(item.id, cardEl.querySelector('.fav-btn'));
     if (action === 'expand') cardEl.classList.add('flipped');
